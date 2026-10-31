@@ -67,6 +67,7 @@ class Config:
     config_dir: Path
     exiftool: str = ""
     ffmpeg: str = ""
+    dng_converter: str = ""
     save_every: int = 500
     quick_hash: bool = True
     embedded_exts: list[str] = field(default_factory=list)
@@ -206,6 +207,7 @@ def load_config(
         config_dir=config_dir,
         exiftool=raw.get("exiftool", ""),
         ffmpeg=raw.get("ffmpeg", ""),
+        dng_converter=raw.get("dng_converter", ""),
         save_every=int(raw.get("save_every", 500)),
         quick_hash=bool(raw.get("quick_hash", True)),
         embedded_exts=[e.lower() for e in raw.get("write", {}).get("embedded", [])],

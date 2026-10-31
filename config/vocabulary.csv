@@ -15,7 +15,7 @@ Marine Life|Sharks and Rays|Ray|Manta ray,a manta ray,Mobula,underwater,species
 Marine Life|Sharks and Rays|Ray|Eagle ray,a spotted eagle ray,Aetobatus ocellatus,underwater,species
 Marine Life|Sharks and Rays|Ray|Blue-spotted ribbontail ray,a blue-spotted ribbontail ray,Taeniura lymma,underwater,species
 Marine Life|Sharks and Rays|Ray|Stingray,a stingray lying on the sand,Dasyatidae,underwater,core
-Marine Life|Mammals|Dugong,a dugong,Dugong dugon,underwater,species
+Marine Life|Mammals|Dugong,a dugong,Dugong dugon,underwater,core
 Marine Life|Mammals|Dolphin,a dolphin,Delphinidae,underwater;topside,core
 Marine Life|Fish|Anemonefish,a clownfish in a sea anemone,Amphiprioninae,underwater,core
 Marine Life|Fish|Parrotfish,a parrotfish,Scaridae,underwater,core
@@ -44,16 +44,16 @@ Marine Life|Fish|Tuna,a tuna or mackerel,Scombridae,underwater,core
 Marine Life|Fish|Sardines,a bait ball of sardines,Clupeidae,underwater,core
 Marine Life|Fish|Lionfish,a lionfish,Pterois,underwater,core
 Marine Life|Fish|Scorpionfish,a scorpionfish camouflaged on the reef,Scorpaenidae,underwater,core
-Marine Life|Fish|Stonefish,a stonefish,Synanceia,underwater,species
+Marine Life|Fish|Stonefish,a stonefish,Synanceia,underwater,core
 Marine Life|Fish|Frogfish,a frogfish,Antennariidae,underwater,core
 Marine Life|Fish|Seahorse,a seahorse,Hippocampus,underwater,core
 Marine Life|Fish|Pipefish,a pipefish or ghost pipefish,Syngnathidae,underwater,core
-Marine Life|Fish|Mandarinfish,a mandarinfish,Synchiropus splendidus,underwater,species
+Marine Life|Fish|Mandarinfish,a mandarinfish,Synchiropus splendidus,underwater,core
 Marine Life|Fish|Trumpetfish,a trumpetfish or cornetfish,Aulostomidae,underwater,core
 Marine Life|Fish|Moray eel,a moray eel,Muraenidae,underwater,core
-Marine Life|Fish|Garden eel,garden eels in the sand,Heteroconger,underwater,species
+Marine Life|Fish|Garden eel,garden eels in the sand,Heteroconger,underwater,core
 Marine Life|Fish|Flatfish,a flatfish or flounder on the sand,Pleuronectiformes,underwater,core
-Marine Life|Fish|Remora,a remora attached to a larger animal,Echeneidae,underwater,species
+Marine Life|Fish|Remora,a remora attached to a larger animal,Echeneidae,underwater,core
 Marine Life|Fish|Fish school,a large school of fish,,underwater,core
 Marine Life|Fish|Juvenile fish,a tiny juvenile reef fish,,underwater,core
 Marine Life|Invertebrates|Nudibranch,a colorful nudibranch sea slug,Nudibranchia,underwater,core
@@ -127,8 +127,8 @@ Landscape|Market,a street market,,land,core
 Landscape|Cave,a cave on land,,land,core
 Wildlife|Mammals|Elephant,an elephant,Elephantidae,land,core
 Wildlife|Mammals|Monkey,a monkey or macaque,Macaca,land,core
-Wildlife|Mammals|Tarsier,a tarsier,Tarsius,land,species
-Wildlife|Reptiles|Komodo dragon,a komodo dragon,Varanus komodoensis,land,species
+Wildlife|Mammals|Tarsier,a tarsier,Tarsius,land,core
+Wildlife|Reptiles|Komodo dragon,a komodo dragon,Varanus komodoensis,land,core
 Wildlife|Reptiles|Lizard,a lizard,Lacertilia,land,core
 Wildlife|Birds|Bird,a bird,Aves,land;topside,core
 Wildlife|Insects|Insect,an insect or butterfly,Insecta,land,core

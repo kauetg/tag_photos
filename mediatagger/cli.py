@@ -15,7 +15,6 @@ from .xmp import is_embedded, read_back, sidecar_path, write_keywords
 PLANNED = {
     "faces": "phase 4",
     "name": "phase 4",
-    "tag": "phase 3",
     "export": "phase 3",
     "write": "phase 2/3",
 }
@@ -32,6 +31,12 @@ def build_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("scan", parents=[common], help="inventory the chosen folders")
     sub.add_parser("doctor", parents=[common], help="show device, tools and config")
+
+    tg = sub.add_parser("tag", parents=[common], help="classify photos: scene gate + vocabulary suggestions")
+    tg.add_argument("--model", choices=["hybrid", "bioclip", "clip"], default="hybrid")
+    tg.add_argument("--top", type=int, default=3, help="suggestions shown per tier")
+    tg.add_argument("--tiers", default="core,species", help="vocabulary tiers to use")
+    tg.add_argument("--redo", action="store_true", help="re-tag files already tagged with this model")
 
     wt = sub.add_parser("write-test", help="append keywords to specific files, then read them back")
     wt.add_argument("files", nargs="+", metavar="FILE")
@@ -58,7 +63,7 @@ def cmd_doctor(cfg) -> int:
     print(f"state file : {cfg.state_path}")
     print(f"device     : {pick_device()}")
     print(f"onnx       : {', '.join(onnx_providers())}")
-    for tool in ("exiftool", "ffmpeg", "ffprobe"):
+    for tool in ("exiftool", "ffmpeg", "ffprobe", "dng_converter"):
         print(f"{tool:<11}: {find_tool(tool, cfg) or 'NOT FOUND'}")
     print(f"folders    : {', '.join(cfg.folders) or '(none)'}")
     print(f"locations  : {len(cfg.locations)} rows")
@@ -129,6 +134,22 @@ def cmd_write_test(cfg, args) -> int:
     return 0
 
 
+def cmd_tag(cfg, args) -> int:
+    from .tag import run_tag  # heavy imports (torch) only when tagging
+
+    exiftool = _exiftool_or_exit(cfg)
+    state = State.load(cfg.state_path)
+    prefix = None
+    if args.folder:
+        folder = Path(args.folder)
+        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    return run_tag(
+        cfg, state, exiftool, args.model,
+        prefix=prefix, limit=args.limit, dry_run=args.dry_run,
+        top=args.top, tiers=set(args.tiers.split(",")), redo=args.redo,
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command in PLANNED:
@@ -140,4 +161,6 @@ def main(argv: list[str] | None = None) -> int:
     cfg = load_config(media_root=args.media_root)
     if args.command == "doctor":
         return cmd_doctor(cfg)
+    if args.command == "tag":
+        return cmd_tag(cfg, args)
     return cmd_scan(cfg, args)

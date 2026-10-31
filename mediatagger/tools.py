@@ -10,6 +10,8 @@ _BUNDLED = {
     "exiftool": ["tools/exiftool/exiftool.exe"],
     "ffmpeg": ["tools/ffmpeg/bin/ffmpeg.exe"],
     "ffprobe": ["tools/ffmpeg/bin/ffprobe.exe"],
+    # Adobe's installer puts it here; absolute, so PROJECT_ROOT / path keeps it as is.
+    "dng_converter": [r"C:\Program Files\Adobe\Adobe DNG Converter\Adobe DNG Converter.exe"],
 }
 
 

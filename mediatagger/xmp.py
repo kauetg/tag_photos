@@ -62,24 +62,28 @@ def sidecar_path(path: Path) -> Path:
     return path.with_suffix(".xmp")
 
 
-def run_exiftool(exiftool: str, args: list[str]) -> str:
-    """Run exiftool with arguments passed through a UTF-8 argfile (safe for accents)."""
+def run_exiftool(exiftool: str, args: list[str], binary: bool = False):
+    """Run exiftool with arguments passed through a UTF-8 argfile (safe for accents).
+
+    Returns stdout as text, or as bytes when `binary` is true (for -b extractions).
+    """
     with tempfile.NamedTemporaryFile(
         "w", suffix=".args", delete=False, encoding="utf-8", newline="\n"
     ) as f:
         f.write("\n".join(args) + "\n")
         argfile = f.name
     try:
+        text_opts = {} if binary else {"text": True, "encoding": "utf-8"}
         proc = subprocess.run(
             [exiftool, "-charset", "utf8", "-charset", "filename=utf8", "-@", argfile],
             capture_output=True,
-            text=True,
-            encoding="utf-8",
+            **text_opts,
         )
     finally:
         os.unlink(argfile)
-    if proc.returncode != 0 or "Error:" in proc.stderr:
-        raise ExiftoolError((proc.stderr or proc.stdout).strip())
+    stderr = proc.stderr.decode("utf-8", "replace") if binary else proc.stderr
+    if proc.returncode != 0 or "Error:" in stderr:
+        raise ExiftoolError(stderr.strip())
     return proc.stdout
 
 
