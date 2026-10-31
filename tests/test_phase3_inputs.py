@@ -39,6 +39,20 @@ def test_jpeg_loads_as_rgb_and_is_shrunk(tmp_path, cfg):
     assert max(image.size) == 512
 
 
+def test_preview_without_orientation_follows_the_raw(monkeypatch):
+    from pathlib import Path
+
+    from PIL import Image
+
+    from mediatagger import imaging
+
+    landscape = Image.new("RGB", (40, 20))
+    monkeypatch.setattr(imaging, "run_exiftool", lambda *a, **k: "6\n")
+    assert imaging._upright(landscape, Path("x.arw"), "exiftool").size == (20, 40)
+    monkeypatch.setattr(imaging, "run_exiftool", lambda *a, **k: "1\n")
+    assert imaging._upright(landscape, Path("x.arw"), "exiftool").size == (40, 20)
+
+
 def test_unreadable_raw_gives_clear_error(tmp_path, cfg):
     raw = tmp_path / "broken.arw"
     raw.write_bytes(b"not a raw file" * 10)

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .config import load_config
 from .device import onnx_providers, pick_device
+from .review import THRESHOLD, export_csv
 from .scan import resolve_roots, scan, write_unmapped_report
 from .state import State
 from .tools import find_tool
@@ -15,7 +16,6 @@ from .xmp import is_embedded, read_back, sidecar_path, write_keywords
 PLANNED = {
     "faces": "phase 4",
     "name": "phase 4",
-    "export": "phase 3",
     "write": "phase 2/3",
 }
 
@@ -37,6 +37,12 @@ def build_parser() -> argparse.ArgumentParser:
     tg.add_argument("--top", type=int, default=3, help="suggestions shown per tier")
     tg.add_argument("--tiers", default="core,species", help="vocabulary tiers to use")
     tg.add_argument("--redo", action="store_true", help="re-tag files already tagged with this model")
+
+    ex = sub.add_parser("export", parents=[common], help="write the suggestions to a CSV for review")
+    ex.add_argument("--output", metavar="CSV", help="default: <data_dir>/review.csv")
+    ex.add_argument("--threshold", type=float, default=THRESHOLD, help="min probability counted as suggested")
+
+    sub.add_parser("review", parents=[common], help="open the Streamlit review page")
 
     wt = sub.add_parser("write-test", help="append keywords to specific files, then read them back")
     wt.add_argument("files", nargs="+", metavar="FILE")
@@ -150,6 +156,22 @@ def cmd_tag(cfg, args) -> int:
     )
 
 
+def cmd_export(cfg, args) -> int:
+    output = Path(args.output) if args.output else cfg.data_dir / "review.csv"
+    count = export_csv(State.load(cfg.state_path), output, args.threshold)
+    print(f"{count} photos exported to {output}")
+    return 0
+
+
+def cmd_review(cfg, args) -> int:
+    import subprocess
+    import sys
+
+    app = Path(__file__).resolve().parent.parent / "review_app.py"
+    command = [sys.executable, "-m", "streamlit", "run", str(app), "--", "--media-root", str(cfg.media_root)]
+    return subprocess.call(command)
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     if args.command in PLANNED:
@@ -163,4 +185,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_doctor(cfg)
     if args.command == "tag":
         return cmd_tag(cfg, args)
+    if args.command == "export":
+        return cmd_export(cfg, args)
+    if args.command == "review":
+        return cmd_review(cfg, args)
     return cmd_scan(cfg, args)

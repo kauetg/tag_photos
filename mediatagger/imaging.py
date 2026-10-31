@@ -33,6 +33,30 @@ def _shrink(image: Image.Image, max_side: int) -> Image.Image:
     return image
 
 
+# EXIF Orientation value -> PIL transpose that makes the picture upright.
+_ORIENTATION_FIXES = {
+    2: Image.Transpose.FLIP_LEFT_RIGHT,
+    3: Image.Transpose.ROTATE_180,
+    4: Image.Transpose.FLIP_TOP_BOTTOM,
+    5: Image.Transpose.TRANSPOSE,
+    6: Image.Transpose.ROTATE_270,
+    7: Image.Transpose.TRANSVERSE,
+    8: Image.Transpose.ROTATE_90,
+}
+
+
+def _upright(image: Image.Image, path: Path, exiftool: str) -> Image.Image:
+    """Sony ARW previews carry no orientation; it only lives in the RAW's own EXIF."""
+    if image.getexif().get(0x0112, 1) != 1:
+        return image  # the preview is self-describing; _shrink applies it
+    try:
+        value = int(run_exiftool(exiftool, ["-n", "-s3", "-Orientation", str(path)]).strip() or 1)
+    except (ExiftoolError, ValueError):
+        return image
+    fix = _ORIENTATION_FIXES.get(value)
+    return image.transpose(fix) if fix is not None else image
+
+
 def _embedded_preview(path: Path, exiftool: str, max_side: int) -> Image.Image | None:
     """First embedded preview that is big enough, else the largest one found."""
     best = None
@@ -50,10 +74,10 @@ def _embedded_preview(path: Path, exiftool: str, max_side: int) -> Image.Image |
         except OSError:
             continue
         if max(image.size) >= MIN_PREVIEW_SIDE:
-            return _shrink(image, max_side)
+            return _shrink(_upright(image, path, exiftool), max_side)
         if best is None or max(image.size) > max(best.size):
             best = image
-    return _shrink(best, max_side) if best is not None else None
+    return _shrink(_upright(best, path, exiftool), max_side) if best is not None else None
 
 
 def _via_dng_converter(path: Path, cfg: Config, exiftool: str, max_side: int) -> Image.Image | None:
