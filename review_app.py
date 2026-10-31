@@ -9,7 +9,9 @@ import sys
 import streamlit as st
 
 from mediatagger.config import load_config
-from mediatagger.review import APPROVED, PENDING, SKIPPED, decide, label, status, suggested, tagged_keys
+from mediatagger.review import (
+    APPROVED, AUTO, PENDING, SKIPPED, decide, is_sample, label, status, suggested, tagged_keys, triage,
+)
 from mediatagger.state import State
 from mediatagger.thumbs import thumbnail
 from mediatagger.tools import find_tool
@@ -46,11 +48,11 @@ if not all_keys:
 
 with st.sidebar:
     st.title("Review tags")
-    counts = {s: sum(status(state.files[k]) == s for k in all_keys) for s in (PENDING, APPROVED, SKIPPED)}
-    st.progress(1 - counts[PENDING] / len(all_keys), text=f"{len(all_keys) - counts[PENDING]} of {len(all_keys)} reviewed")
+    counts = {s: sum(status(state.files[k]) == s for k in all_keys) for s in (PENDING, APPROVED, SKIPPED, AUTO)}
+    st.progress(1 - counts[PENDING] / len(all_keys), text=f"{len(all_keys) - counts[PENDING]} of {len(all_keys)} decided")
     shown = st.segmented_control(
         "Show",
-        [PENDING, APPROVED, SKIPPED, "all"],
+        [PENDING, APPROVED, SKIPPED, AUTO, "all"],
         default=PENDING,
         format_func=lambda s: f"{s} ({counts[s]})" if s in counts else "all",
         key="shown",
@@ -100,6 +102,8 @@ with right:
     place = ", ".join(p for p in (location.get("city"), location.get("country")) if p)
     scene = max(tags["scene"], key=tags["scene"].get)
     st.caption(f"{key.rsplit('/', 1)[0]}  \n{place or 'no location'} · {scene} {tags['scene'][scene]:.0%} · {status(entry)}")
+    if status(entry) == PENDING and triage(entry)[0] == "auto" and is_sample(key):
+        st.info("The model was confident here; this is a spot check of the automatic approvals.", title="Spot check")
 
     st.pills(
         "Tags to write",

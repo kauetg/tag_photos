@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .config import load_config
 from .device import onnx_providers, pick_device
-from .review import THRESHOLD, export_csv
+from .review import AUTO_THRESHOLD, THRESHOLD, apply_triage, export_csv
 from .scan import resolve_roots, scan, write_unmapped_report
 from .state import State
 from .tools import find_tool
@@ -16,7 +16,6 @@ from .xmp import is_embedded, read_back, sidecar_path, write_keywords
 PLANNED = {
     "faces": "phase 4",
     "name": "phase 4",
-    "write": "phase 2/3",
 }
 
 
@@ -43,6 +42,14 @@ def build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--threshold", type=float, default=THRESHOLD, help="min probability counted as suggested")
 
     sub.add_parser("review", parents=[common], help="open the Streamlit review page")
+
+    tr = sub.add_parser("triage", parents=[common], help="auto-approve clear photos, leave the uncertain for review")
+    tr.add_argument("--auto", type=float, default=AUTO_THRESHOLD, help="core tags at least this likely are automatic")
+    tr.add_argument("--uncertain", type=float, default=THRESHOLD, help="core tags from here up to --auto need review")
+
+    wr = sub.add_parser("write", parents=[common], help="write approved keywords into photos (simulation unless --apply)")
+    wr.add_argument("--apply", action="store_true", help="really write; without it nothing is changed")
+    wr.add_argument("--redo", action="store_true", help="write again even if already written")
 
     wt = sub.add_parser("write-test", help="append keywords to specific files, then read them back")
     wt.add_argument("files", nargs="+", metavar="FILE")
@@ -163,6 +170,17 @@ def cmd_export(cfg, args) -> int:
     return 0
 
 
+def cmd_triage(cfg, args) -> int:
+    from .tag import describe_triage
+
+    state = State.load(cfg.state_path)
+    counts = apply_triage(state, args.auto, args.uncertain)
+    print(describe_triage(counts) + (" (dry run, nothing saved)" if args.dry_run else ""))
+    if not args.dry_run:
+        state.save()
+    return 0
+
+
 def cmd_review(cfg, args) -> int:
     import subprocess
     import sys
@@ -170,6 +188,22 @@ def cmd_review(cfg, args) -> int:
     app = Path(__file__).resolve().parent.parent / "review_app.py"
     command = [sys.executable, "-m", "streamlit", "run", str(app), "--", "--media-root", str(cfg.media_root)]
     return subprocess.call(command)
+
+
+def cmd_write(cfg, args) -> int:
+    from .write import run_write
+
+    exiftool = _exiftool_or_exit(cfg)
+    if args.apply:
+        print(f"WRITING into {cfg.media_root}")
+    prefix = None
+    if args.folder:
+        folder = Path(args.folder)
+        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    return run_write(
+        cfg, State.load(cfg.state_path), exiftool,
+        prefix=prefix, limit=args.limit, apply=args.apply, redo=args.redo,
+    )
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -185,6 +219,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_doctor(cfg)
     if args.command == "tag":
         return cmd_tag(cfg, args)
+    if args.command == "triage":
+        return cmd_triage(cfg, args)
+    if args.command == "write":
+        return cmd_write(cfg, args)
     if args.command == "export":
         return cmd_export(cfg, args)
     if args.command == "review":

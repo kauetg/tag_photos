@@ -7,6 +7,7 @@ from .classify import HybridTagger, Tagger
 from .config import Config
 from .device import pick_device
 from .imaging import ImageLoadError, load_image
+from .review import apply_triage
 from .state import State
 from .vocabulary import load_vocabulary
 
@@ -34,6 +35,13 @@ def describe(result: dict, top: int) -> str:
         label = s.keyword.split("|")[-1]
         parts.append(f"{label} {s.prob:.2f}{'*' if s.tier == 'species' else ''}")
     return " | ".join(parts)
+
+
+def describe_triage(counts: dict[str, int]) -> str:
+    return (
+        f"triage: {counts['auto']} approved automatically, {counts['review']} need review, "
+        f"{counts['sample']} spot checks, {counts['kept']} already decided by you"
+    )
 
 
 def run_tag(
@@ -89,6 +97,7 @@ def run_tag(
             state.save()
 
     if not dry_run:
+        print(describe_triage(apply_triage(state)))
         state.save()
     print(f"{len(keys)} files processed" + (" (dry run, nothing saved)" if dry_run else ""))
     return 0

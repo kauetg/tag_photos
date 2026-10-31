@@ -44,6 +44,43 @@ def test_decide_and_status(tmp_path):
     assert status(entry) == SKIPPED and entry["review"]["keywords"] == []
 
 
+def tagged(*suggestions):
+    return {"kind": "raw", "tags": {"scene": {"underwater": 1.0}, "suggestions": [
+        {"keyword": k, "prob": p, "tier": t} for k, p, t in suggestions]}}
+
+
+def test_triage_bands():
+    from mediatagger.review import triage
+
+    turtle = "Marine Life|Reptiles|Sea turtle"
+    assert triage(tagged((turtle, 0.98, "core"))) == ("auto", [turtle])
+    assert triage(tagged((turtle, 0.98, "core"), ("Activity|Scuba diving", 0.6, "core")))[0] == "review"
+    assert triage(tagged((turtle, 0.7, "core")))[0] == "review"
+    assert triage(tagged((turtle, 0.3, "core"))) == ("auto", [])  # nothing clear: location only
+    # species never make a photo automatic, and never block one that is otherwise clear
+    assert triage(tagged((turtle, 0.98, "core"), (turtle + "|Green sea turtle", 0.6, "species"))) == ("auto", [turtle])
+
+
+def test_apply_triage_keeps_human_decisions(tmp_path):
+    from mediatagger.review import AUTO, apply_triage, is_sample
+
+    turtle = "Marine Life|Reptiles|Sea turtle"
+    state = State(tmp_path / "state.json")
+    keys = [f"f/{i}.arw" for i in range(200)]
+    state.files = {k: tagged((turtle, 0.98, "core")) for k in keys}
+    state.files["f/human.arw"] = tagged((turtle, 0.98, "core"))
+    decide(state.files["f/human.arw"], [], approved=False)
+    state.files["f/unsure.arw"] = tagged((turtle, 0.6, "core"))
+    counts = apply_triage(state)
+    assert status(state.files["f/human.arw"]) == "skipped" and counts["kept"] == 1
+    assert status(state.files["f/unsure.arw"]) == PENDING and counts["review"] == 1
+    samples = [k for k in keys if is_sample(k)]
+    assert counts["sample"] == len(samples) and 0 < len(samples) < 20
+    assert counts[AUTO] == 200 - len(samples)
+    assert all(status(state.files[k]) == PENDING for k in samples)
+    assert apply_triage(state) == counts  # idempotent
+
+
 def test_export_csv(tmp_path):
     state = make_state(tmp_path)
     decide(state.files["a/one.arw"], ["Marine Life|Reptiles|Sea turtle"], approved=True)
