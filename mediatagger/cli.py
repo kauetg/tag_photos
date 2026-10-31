@@ -41,6 +41,8 @@ def build_parser() -> argparse.ArgumentParser:
     wt.add_argument("--city", default="")
     wt.add_argument("--sublocation", default="")
     wt.add_argument("--dry-run", action="store_true")
+    wt.add_argument("--embed", action="store_true",
+                    help="experiment: embed in video instead of a sidecar (use on copies only)")
     wt.add_argument("--ignore-minor", action="store_true",
                     help="let exiftool write despite 'minor' warnings (e.g. DJI maker notes)")
 
@@ -107,6 +109,8 @@ def cmd_write_test(cfg, args) -> int:
     exiftool = _exiftool_or_exit(cfg)
     if args.ignore_minor:
         cfg.ignore_minor_errors = True
+    if args.embed:
+        cfg.embedded_exts = [*cfg.embedded_exts, ".mp4", ".mov"]
     for name in args.files:
         path = Path(name)
         if not path.is_file():
