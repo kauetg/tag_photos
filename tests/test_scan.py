@@ -83,9 +83,21 @@ def test_missing_detection_stays_inside_scanned_folder(cfg, media):
     assert report.missing == 0
 
 
+def test_date_range_is_fallback_and_name_wins(cfg):
+    state, report = run(cfg)
+    # "Casinha" has no name match, but its date (20250101) falls in a range.
+    casinha = state.files["20250101 Casinha/e.mov"]["location"]
+    assert casinha["source"] == "date" and casinha["sublocation"] == "Newyear"
+    # Pereque folder is dated 20250122 (inside the wide range) but the name wins.
+    pereque = state.files["20250122 Pereque/a.ARW"]["location"]
+    assert pereque["source"] == "name"
+    assert report.unmapped == {}
+
+
 def test_unmapped_folders_report(cfg):
+    cfg.date_ranges.clear()
     _, report = run(cfg)
-    # "Casinha" has no locations.csv row.
+    # "Casinha" has no locations.csv row and no date range.
     assert report.unmapped["20250101 Casinha"] == 1
     path = write_unmapped_report(cfg, report)
     assert "20250101 Casinha" in path.read_text(encoding="utf-8")

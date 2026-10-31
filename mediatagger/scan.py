@@ -108,8 +108,16 @@ def scan(
             report.new += not old
 
             folder_parts = rel.parts[:-1]
+            folder_date = _folder_date(folder_parts)
             if folder_parts not in location_cache:
-                location_cache[folder_parts] = cfg.find_location(folder_parts)
+                # Folder name first; the date range is only a fallback.
+                by_name = cfg.find_location(folder_parts)
+                by_date = None if by_name else cfg.find_location_by_date(folder_date)
+                location_cache[folder_parts] = (
+                    by_name.as_dict("name") if by_name
+                    else by_date.as_dict("date") if by_date
+                    else None
+                )
             location = location_cache[folder_parts]
             if location is None:
                 report.unmapped[folder_parts[0] if folder_parts else "(root)"] += 1
@@ -130,8 +138,8 @@ def scan(
                 "size": stat.st_size,
                 "mtime": stat.st_mtime_ns,
                 "hash": digest,
-                "folder_date": _folder_date(folder_parts),
-                "location": location.as_dict() if location else None,
+                "folder_date": folder_date,
+                "location": location,
                 "stages": {"scan": "done"},
                 "missing": False,
             }

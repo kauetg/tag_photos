@@ -55,4 +55,10 @@ dirs = ["*.lrdata", "Old Lightroom Catalogs"]
         "Sao Paulo,Location|Brazil|Sao Paulo,Brazil,Sao Paulo,\n",
         encoding="utf-8",
     )
+    (config_dir / "date_ranges.csv").write_text(
+        "start,end,keyword,country,city,sublocation,note\n"
+        "20250101,20250131,Location|Brazil|Casa,Brazil,Casa,,wide\n"
+        "20250101,20250101,Location|Brazil|Casa|Newyear,Brazil,Casa,Newyear,narrow\n",
+        encoding="utf-8",
+    )
     return load_config(config_dir)

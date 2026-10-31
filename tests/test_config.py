@@ -17,6 +17,14 @@ def test_location_found_in_deeper_folder(cfg):
     assert loc.sublocation == "Pereque"
 
 
+def test_date_range_shortest_wins(cfg):
+    assert cfg.find_location_by_date("20250101").sublocation == "Newyear"
+    assert cfg.find_location_by_date("20250115").keyword == "Location|Brazil|Casa"
+    assert cfg.find_location_by_date("20250201") is None
+    assert cfg.find_location_by_date(None) is None
+    assert cfg.find_location_by_date("20251399") is None  # not a real date
+
+
 def test_ignored_dirs(cfg):
     assert cfg.is_ignored_dir("Malaysia24-v13 Previews.lrdata")
     assert cfg.is_ignored_dir("old lightroom catalogs")

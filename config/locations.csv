@@ -1,5 +1,77 @@
 match,keyword,country,city,sublocation
-Renggis,Location|Malaysia|Tioman|Renggis,Malaysia,Tioman,Renggis
-Ilhabela,Location|Brazil|Sao Paulo|Ilhabela,Brazil,Ilhabela,
-Pereque,Location|Brazil|Sao Paulo|Guaruja|Pereque,Brazil,Guaruja,Pereque
+Kl,Location|Malaysia|Kuala Lumpur,Malaysia,Kuala Lumpur,
+Rawa,Location|Malaysia|Johor|Rawa Island,Malaysia,Mersing,Rawa Island
+Mersing,Location|Malaysia|Johor|Mersing,Malaysia,Mersing,
+Tioman,Location|Malaysia|Pahang|Tioman,Malaysia,Tioman,
+Tioman Paya,Location|Malaysia|Pahang|Tioman|Paya,Malaysia,Tioman,Paya
+Tioman Tekek,Location|Malaysia|Pahang|Tioman|Tekek,Malaysia,Tioman,Tekek
+Rompin,Location|Malaysia|Pahang|Rompin,Malaysia,Rompin,
+Mabul,Location|Malaysia|Sabah|Semporna|Mabul,Malaysia,Semporna,Mabul
+Sipadan,Location|Malaysia|Sabah|Semporna|Sipadan,Malaysia,Semporna,Sipadan
+Kapalai,Location|Malaysia|Sabah|Semporna|Kapalai,Malaysia,Semporna,Kapalai
+Kapilan,Location|Malaysia|Sabah|Semporna|Kapalai,Malaysia,Semporna,Kapalai
+Kapalan,Location|Malaysia|Sabah|Semporna|Kapalai,Malaysia,Semporna,Kapalai
+Singapura,Location|Singapore,Singapore,Singapore,
+Singapur,Location|Singapore,Singapore,Singapore,
+Singa,Location|Singapore,Singapore,Singapore,
+Sg,Location|Singapore,Singapore,Singapore,
+Batam,Location|Indonesia|Riau Islands|Batam,Indonesia,Batam,
+Bintan,Location|Indonesia|Riau Islands|Bintan,Indonesia,Bintan,
+Trikora,Location|Indonesia|Riau Islands|Bintan|Trikora,Indonesia,Bintan,Trikora
+Komodo,Location|Indonesia|Flores|Komodo,Indonesia,Komodo,
+Labuan Bajo,Location|Indonesia|Flores|Labuan Bajo,Indonesia,Labuan Bajo,
+Padar,Location|Indonesia|Flores|Komodo|Padar,Indonesia,Komodo,Padar
+Bali,Location|Indonesia|Bali,Indonesia,Bali,
 Chiang Mai,Location|Thailand|Chiang Mai,Thailand,Chiang Mai,
+Elephant Nature Park,Location|Thailand|Chiang Mai|Elephant Nature Park,Thailand,Chiang Mai,Elephant Nature Park
+Similan,Location|Thailand|Similan Islands,Thailand,Similan Islands,
+Ko Tachai,Location|Thailand|Similan Islands|Ko Tachai,Thailand,Similan Islands,Ko Tachai
+Ko Ta Chai,Location|Thailand|Similan Islands|Ko Tachai,Thailand,Similan Islands,Ko Tachai
+Ko Bon,Location|Thailand|Similan Islands|Ko Bon,Thailand,Similan Islands,Ko Bon
+Richilieu Rock,Location|Thailand|Similan Islands|Richelieu Rock,Thailand,Similan Islands,Richelieu Rock
+Phuket,Location|Thailand|Phuket,Thailand,Phuket,
+Railay,Location|Thailand|Krabi|Railay,Thailand,Krabi,Railay
+Lanta,Location|Thailand|Krabi|Koh Lanta,Thailand,Koh Lanta,
+Koh Haa,Location|Thailand|Krabi|Koh Lanta|Koh Haa,Thailand,Koh Lanta,Koh Haa
+Rok Haa,Location|Thailand|Krabi|Koh Lanta|Koh Haa,Thailand,Koh Lanta,Koh Haa
+Phi Phi,Location|Thailand|Krabi|Phi Phi,Thailand,Phi Phi,
+Bangkok,Location|Thailand|Bangkok,Thailand,Bangkok,
+Bohol,Location|Philippines|Bohol,Philippines,Bohol,
+Panglao,Location|Philippines|Bohol|Panglao,Philippines,Panglao,
+Alona,Location|Philippines|Bohol|Panglao|Alona,Philippines,Panglao,Alona
+Loboc,Location|Philippines|Bohol|Loboc,Philippines,Loboc,
+Anda,Location|Philippines|Bohol|Anda,Philippines,Anda,
+Balicasag,Location|Philippines|Bohol|Balicasag,Philippines,Bohol,Balicasag
+Tagbilaran,Location|Philippines|Bohol|Tagbilaran,Philippines,Tagbilaran,
+Dumaguete,Location|Philippines|Negros Oriental|Dumaguete,Philippines,Dumaguete,
+Tambaybay,Location|Philippines|Negros Oriental|Dumaguete|Tambaybay,Philippines,Dumaguete,Tambaybay
+Siargao,Location|Philippines|Siargao,Philippines,Siargao,
+Cloud 9,Location|Philippines|Siargao|Cloud 9,Philippines,Siargao,Cloud 9
+Magpupungko,Location|Philippines|Siargao|Magpupungko,Philippines,Siargao,Magpupungko
+Siqui,Location|Philippines|Siquijor,Philippines,Siquijor,
+Salagdon,Location|Philippines|Siquijor|Salagdon,Philippines,Siquijor,Salagdon
+Cambugahay,Location|Philippines|Siquijor|Cambugahay,Philippines,Siquijor,Cambugahay
+El Nido,Location|Philippines|Palawan|El Nido,Philippines,El Nido,
+Elnido,Location|Philippines|Palawan|El Nido,Philippines,El Nido,
+Coron,Location|Philippines|Palawan|Coron,Philippines,Coron,
+Cebu,Location|Philippines|Cebu,Philippines,Cebu,
+Apo Reef,Location|Philippines|Mindoro|Apo Reef,Philippines,Apo Reef,
+Madrid,Location|Spain|Madrid,Spain,Madrid,
+Madris,Location|Spain|Madrid,Spain,Madrid,
+Prado,Location|Spain|Madrid,Spain,Madrid,
+Retiro,Location|Spain|Madrid,Spain,Madrid,
+Reina Sofia,Location|Spain|Madrid,Spain,Madrid,
+Atleti,Location|Spain|Madrid,Spain,Madrid,
+Gran Via,Location|Spain|Madrid,Spain,Madrid,
+Segovia,Location|Spain|Segovia,Spain,Segovia,
+Ilhabela,Location|Brazil|Sao Paulo|Ilhabela,Brazil,Ilhabela,
+Ubatuba,Location|Brazil|Sao Paulo|Ubatuba,Brazil,Ubatuba,
+Itamambuca,Location|Brazil|Sao Paulo|Ubatuba|Itamambuca,Brazil,Ubatuba,Itamambuca
+Puruba,Location|Brazil|Sao Paulo|Ubatuba|Puruba,Brazil,Ubatuba,Puruba
+Pereque,Location|Brazil|Sao Paulo|Ubatuba|Pereque,Brazil,Ubatuba,Pereque
+Parati,Location|Brazil|Rio de Janeiro|Paraty,Brazil,Paraty,
+Butanta,Location|Brazil|Sao Paulo|Sao Paulo,Brazil,Sao Paulo,
+Usp,Location|Brazil|Sao Paulo|Sao Paulo,Brazil,Sao Paulo,
+Morumbi,Location|Brazil|Sao Paulo|Sao Paulo,Brazil,Sao Paulo,
+Sp,Location|Brazil|Sao Paulo|Sao Paulo,Brazil,Sao Paulo,
+Jundiai,Location|Brazil|Sao Paulo|Jundiai,Brazil,Jundiai,

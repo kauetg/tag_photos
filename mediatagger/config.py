@@ -7,6 +7,7 @@ import re
 import tomllib
 import unicodedata
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
@@ -30,13 +31,33 @@ class Location:
     city: str = ""
     sublocation: str = ""
 
-    def as_dict(self) -> dict:
+    def as_dict(self, source: str = "name") -> dict:
         return {
             "keyword": self.keyword,
             "country": self.country,
             "city": self.city,
             "sublocation": self.sublocation,
+            "source": source,  # "name" (folder description) or "date" (date range)
         }
+
+
+@dataclass(frozen=True)
+class DateRange:
+    start: date
+    end: date
+    location: Location
+
+    @property
+    def span(self) -> int:
+        return (self.end - self.start).days
+
+
+def parse_folder_date(text: str) -> date | None:
+    """'20250122' -> date, or None when it is not a valid YYYYMMDD."""
+    try:
+        return datetime.strptime(text, "%Y%m%d").date()
+    except ValueError:
+        return None
 
 
 @dataclass
@@ -52,6 +73,7 @@ class Config:
     ignore_dirs: list[str] = field(default_factory=list)
     folders: list[str] = field(default_factory=list)
     locations: list[Location] = field(default_factory=list)
+    date_ranges: list[DateRange] = field(default_factory=list)
 
     @property
     def state_path(self) -> Path:
@@ -78,6 +100,14 @@ class Config:
             if best:
                 return best
         return None
+
+    def find_location_by_date(self, folder_date: str | None) -> Location | None:
+        """Fallback when no name matches: the shortest date range containing the date wins."""
+        day = parse_folder_date(folder_date) if folder_date else None
+        if day is None:
+            return None
+        hits = [r for r in self.date_ranges if r.start <= day <= r.end]
+        return min(hits, key=lambda r: r.span).location if hits else None
 
 
 def _read_toml(path: Path) -> dict:
@@ -109,6 +139,33 @@ def _read_locations(path: Path) -> list[Location]:
             for row in csv.DictReader(f)
             if (row.get("match") or "").strip()
         ]
+
+
+def _read_date_ranges(path: Path) -> list[DateRange]:
+    """date_ranges.csv: start,end (YYYYMMDD, inclusive), keyword, country, city, sublocation."""
+    if not path.exists():
+        return []
+    ranges = []
+    with path.open(newline="", encoding="utf-8") as f:
+        for line, row in enumerate(csv.DictReader(f), start=2):
+            start = parse_folder_date((row.get("start") or "").strip())
+            end = parse_folder_date((row.get("end") or "").strip())
+            if start is None or end is None or end < start:
+                raise SystemExit(f"{path.name} line {line}: invalid start/end dates")
+            ranges.append(
+                DateRange(
+                    start,
+                    end,
+                    Location(
+                        match="",
+                        keyword=row["keyword"].strip(),
+                        country=(row.get("country") or "").strip(),
+                        city=(row.get("city") or "").strip(),
+                        sublocation=(row.get("sublocation") or "").strip(),
+                    ),
+                )
+            )
+    return ranges
 
 
 def load_config(
@@ -148,4 +205,5 @@ def load_config(
         ignore_dirs=list(raw.get("ignore", {}).get("dirs", [])),
         folders=_read_folders(config_dir / "folders.txt"),
         locations=_read_locations(config_dir / "locations.csv"),
+        date_ranges=_read_date_ranges(config_dir / "date_ranges.csv"),
     )
