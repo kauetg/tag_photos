@@ -1,0 +1,3 @@
+# Folders to process, one per line, relative to media_root (or absolute inside it).
+# "*" means everything under media_root (ignored folders are still skipped).
+*

@@ -1,0 +1,2 @@
+# Phase 1 uses only the standard library.
+# PyTorch and onnxruntime are installed per machine (see README), not listed here.

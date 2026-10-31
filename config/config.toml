@@ -1,0 +1,33 @@
+# Shared defaults. Put machine-specific values (media_root, tool paths)
+# in config/config.local.toml, which is not committed.
+
+# Root of the media drive (e.g. "D:\\" or "E:\\"). All state paths are relative to it.
+media_root = ""
+
+# Where state.json and reports live (relative to the project root).
+data_dir = "data"
+
+# Explicit tool paths. Empty = look in tools/ first, then in PATH.
+exiftool = ""
+ffmpeg = ""
+
+# Save state.json every N processed files during long runs.
+save_every = 500
+
+# Fast fingerprint (size + first/last 64 KB). Lets later stages detect changed files.
+quick_hash = true
+
+[extensions]
+photo = [".jpg", ".jpeg"]
+raw = [".arw", ".dng", ".gpr"]
+video = [".mp4", ".mov"]
+
+[ignore]
+# Folder-name patterns (case-insensitive, fnmatch) skipped during scan.
+dirs = [
+    "*.lrdata",
+    "*.lrcat-data",
+    "Old Lightroom Catalogs",
+    "System Volume Information",
+    "$RECYCLE.BIN",
+]

@@ -1,0 +1,4 @@
+# Copy to config.local.toml and edit for this machine.
+media_root = "D:\\"
+# exiftool = "C:\\path\\to\\exiftool.exe"
+# ffmpeg = "C:\\path\\to\\ffmpeg.exe"

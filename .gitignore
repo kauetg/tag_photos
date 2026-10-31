@@ -1,0 +1,14 @@
+# Media, state and machine-specific files never go to the repo
+data/
+tools/
+config/config.local.toml
+faces/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# IDE
+.idea/
