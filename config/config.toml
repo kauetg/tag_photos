@@ -22,6 +22,17 @@ photo = [".jpg", ".jpeg"]
 raw = [".arw", ".dng", ".gpr"]
 video = [".mp4", ".mov"]
 
+[write]
+# Extensions that get keywords embedded in the file; everything else
+# (RAW, video) gets a sidecar .xmp next to it and the original is never touched.
+embedded = [".jpg", ".jpeg", ".dng"]
+# exiftool keeps a "<file>_original" backup of embedded writes unless this is true.
+# Turn it on only after the write tests are validated (it would double 4 TB otherwise).
+overwrite_original = false
+# exiftool refuses to write when it finds a "minor" problem (e.g. DJI maker notes with odd
+# offsets). Enabling this lets those writes through; verify image data is unchanged first.
+ignore_minor_errors = false
+
 [ignore]
 # Folder-name patterns (case-insensitive, fnmatch) skipped during scan.
 dirs = [

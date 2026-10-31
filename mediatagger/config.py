@@ -69,6 +69,9 @@ class Config:
     ffmpeg: str = ""
     save_every: int = 500
     quick_hash: bool = True
+    embedded_exts: list[str] = field(default_factory=list)
+    overwrite_original: bool = False
+    ignore_minor_errors: bool = False
     kinds: dict[str, str] = field(default_factory=dict)  # ".arw" -> "raw"
     ignore_dirs: list[str] = field(default_factory=list)
     folders: list[str] = field(default_factory=list)
@@ -169,7 +172,9 @@ def _read_date_ranges(path: Path) -> list[DateRange]:
 
 
 def load_config(
-    config_dir: Path | None = None, media_root: str | None = None
+    config_dir: Path | None = None,
+    media_root: str | None = None,
+    need_media_root: bool = True,
 ) -> Config:
     """Merge config.toml with config.local.toml; `media_root` overrides both."""
     config_dir = Path(config_dir) if config_dir else DEFAULT_CONFIG_DIR
@@ -177,6 +182,8 @@ def load_config(
     raw.update(_read_toml(config_dir / "config.local.toml"))
 
     root = media_root or raw.get("media_root", "")
+    if not root and not need_media_root:
+        root = "."
     if not root:
         raise SystemExit(
             "media_root is not set. Edit config/config.local.toml "
@@ -201,6 +208,9 @@ def load_config(
         ffmpeg=raw.get("ffmpeg", ""),
         save_every=int(raw.get("save_every", 500)),
         quick_hash=bool(raw.get("quick_hash", True)),
+        embedded_exts=[e.lower() for e in raw.get("write", {}).get("embedded", [])],
+        overwrite_original=bool(raw.get("write", {}).get("overwrite_original", False)),
+        ignore_minor_errors=bool(raw.get("write", {}).get("ignore_minor_errors", False)),
         kinds=kinds,
         ignore_dirs=list(raw.get("ignore", {}).get("dirs", [])),
         folders=_read_folders(config_dir / "folders.txt"),
