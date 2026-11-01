@@ -77,6 +77,23 @@ media_root = "D:\\"
 
 You can also pass `--media-root "path"` to any command instead.
 
+**6. Your drives**
+
+Every disk is a *drive* with a name ("Splash IV"). The index remembers which drive each file is on, so you can search
+all of them and only plug a disk in to open, edit or tag its files. A disk is recognised by its serial number, never by
+its letter.
+
+```bash
+python tagger.py drives import SHEET.tsv       # your old sheet: HD, Descrição, Letra, Tamanho, Localização ...
+python tagger.py drives                        # list them: files indexed, plugged in or not
+python tagger.py drives pair "Splash IV" --letter E:   # once, with the disk plugged in
+python tagger.py drives scan "Splash IV"       # index it and make the previews
+python tagger.py drives import-state "Splash IV"       # move an old data/state.json under a drive
+```
+
+The **Drives** page does the same: it lists the disks, notices a plugged-in disk it does not know, and scans in the
+background. `tag`, `video`, `write` and `scan` take `--drive NAME`. Plug-in detection is only implemented on Windows.
+
 **6. Check everything**
 
 ```bash
@@ -160,13 +177,13 @@ video files.
 | `config/vocabulary.csv` | everything the model looks for, plus your own tags (edit in the app) |
 | `config/locations.csv`, `config/date_ranges.csv` | folder words and dates that mean a place (edit in the app) |
 | `config/config.toml` | shared settings; `config.local.toml` holds this machine's paths and is not committed |
-| `data/state.json` | everything the tool knows about each file, including your review decisions |
-| `data/thumbs/` | cached previews (safe to delete) |
+| `data/index.db` | SQLite: your drives and everything the tool knows about each file, including your review decisions |
+| `data/thumbs/` | cached previews (safe to delete; `tagger thumbs --drive NAME` makes them again while the drive is plugged in) |
 | `data/write_log.jsonl` | a line for every file written |
 | `tools/` | exiftool and ffmpeg (not committed) |
 
-File paths in `state.json` are relative to `media_root`, so you can copy `data/state.json` to another machine
-(together with the `config/` files, which are in git) as long as the folders under `media_root` are the same.
+File keys in the index are `<drive name>/<path on the drive>`, so you can copy `data/index.db` to another machine
+(together with the `config/` files, which are in git) and search it without the disks.
 Edits to `config/*.csv` made in the app leave a `.bak` copy of the previous version.
 
 ## Troubleshooting

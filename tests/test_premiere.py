@@ -122,7 +122,7 @@ def test_selection_uses_each_videos_own_search_and_date_order(monkeypatch, tmp_p
             {"keyword": TURTLE, "times": [20.0]}, {"keyword": manta, "times": [30.0]}]}},
     }
     selection = {"20260716 b/v/late.mp4": "turtle", "20260125 a/v/early.mp4": "manta"}
-    xml, summary = premiere.export_selection(state, tmp_path, "ffprobe", selection, "Selected videos", bins=False)
+    xml, summary = premiere.export_selection(state, lambda key: tmp_path / key, "ffprobe", selection, "Selected videos", bins=False)
     root = parse(xml)
     names = [c.findtext("name") for c in root.findall("./sequence/media/video/track/clipitem")]
     assert names == ["early.mp4", "late.mp4"]  # oldest dive first

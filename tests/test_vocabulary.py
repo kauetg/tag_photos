@@ -62,21 +62,21 @@ def test_old_topside_name_is_read_as_drone(tmp_path):
 def test_state_load_renames_the_old_scene_everywhere(tmp_path):
     import json
 
-    from mediatagger.state import State
+    from mediatagger.state import State, import_state_json
 
-    path = tmp_path / "state.json"
+    old = tmp_path / "state.json"
+    path = tmp_path / "index.db"
     files = {
         "a/photo.arw": {"kind": "raw", "tags": {"scene": {"underwater": 0.1, "topside": 0.9}}, "review": {"status": "approved", "scene": "topside"}},
         "a/clip.mp4": {"kind": "video", "video": {"scene": {"topside": 0.6, "land": 0.4}}},
     }
-    path.write_text(json.dumps({"version": 1, "files": files}), encoding="utf-8")
+    old.write_text(json.dumps({"version": 1, "files": files}), encoding="utf-8")
+    import_state_json(old, path, "D")
     state = State.load(path)
-    assert state.files["a/photo.arw"]["tags"]["scene"] == {"underwater": 0.1, "drone": 0.9}
-    assert state.files["a/photo.arw"]["review"]["scene"] == "drone"
-    assert state.files["a/clip.mp4"]["video"]["scene"] == {"drone": 0.6, "land": 0.4}
-    State.load(path)  # already migrated data loads unchanged
-    state.save()
-    assert "topside" not in path.read_text(encoding="utf-8")
+    assert state.files["D/a/photo.arw"]["tags"]["scene"] == {"underwater": 0.1, "drone": 0.9}
+    assert state.files["D/a/photo.arw"]["review"]["scene"] == "drone"
+    assert state.files["D/a/clip.mp4"]["video"]["scene"] == {"drone": 0.6, "land": 0.4}
+    assert "topside" not in json.dumps(State.load(path).files)  # what is stored is already migrated
 
 
 def test_add_manual_tag(tmp_path):

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import csv
 import fnmatch
+import os
 import re
 import tomllib
 import unicodedata
@@ -60,6 +61,12 @@ def parse_folder_date(text: str) -> date | None:
         return None
 
 
+class DriveNotMounted(Exception):
+    def __init__(self, drive: str):
+        super().__init__(f"drive '{drive}' is not plugged in")
+        self.drive = drive
+
+
 @dataclass
 class Config:
     media_root: Path
@@ -79,10 +86,28 @@ class Config:
     folders: list[str] = field(default_factory=list)
     locations: list[Location] = field(default_factory=list)
     date_ranges: list[DateRange] = field(default_factory=list)
+    drive: str = ""  # name of the drive being scanned now (media_root is where it is plugged in)
+    mounts: dict[str, Path] = field(default_factory=dict)  # drive name -> where it is plugged in right now
 
     @property
     def state_path(self) -> Path:
-        return self.data_dir / "state.json"
+        return self.data_dir / "index.db"
+
+    def mount_of(self, drive: str) -> Path | None:
+        if drive == self.drive:
+            return self.media_root
+        return self.mounts.get(drive)
+
+    def is_mounted(self, key: str) -> bool:
+        return self.mount_of(key.partition("/")[0]) is not None
+
+    def path_of(self, key: str) -> Path:
+        """Where the file behind a key is right now. Raises when its drive is not plugged in."""
+        drive, _, rel = key.partition("/")
+        root = self.mount_of(drive)
+        if root is None:
+            raise DriveNotMounted(drive)
+        return root / rel
 
     def kind_of(self, filename: str) -> str | None:
         return self.kinds.get(Path(filename).suffix.lower())
@@ -177,9 +202,10 @@ def load_config(
     config_dir: Path | None = None,
     media_root: str | None = None,
     need_media_root: bool = True,
+    drive: str | None = None,
 ) -> Config:
     """Merge config.toml with config.local.toml; `media_root` overrides both."""
-    config_dir = Path(config_dir) if config_dir else DEFAULT_CONFIG_DIR
+    config_dir = Path(config_dir or os.environ.get("TAGGER_CONFIG_DIR") or DEFAULT_CONFIG_DIR)
     raw = _read_toml(config_dir / "config.toml")
     raw.update(_read_toml(config_dir / "config.local.toml"))
 
@@ -202,7 +228,12 @@ def load_config(
         for ext in exts
     }
 
+    from .drives import mounts_by_drive
+
+    mounts = {name: m.root for name, m in mounts_by_drive(data_dir / "index.db").items()}
     return Config(
+        drive=drive or raw.get("drive", ""),
+        mounts=mounts,
         media_root=Path(root),
         data_dir=data_dir,
         config_dir=config_dir,

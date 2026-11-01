@@ -8,15 +8,16 @@ from pathlib import Path
 import streamlit as st
 
 from .config import load_config
+from .drives import mounts_by_drive
 from .state import State
-from .thumbs import thumbnail
+from .thumbs import cached_thumbnail, thumbnail
 from .tools import find_tool
 from .vocabulary import load_vocabulary
 
 
 @st.cache_resource
 def _load(media_root):
-    cfg = load_config(media_root=media_root)
+    cfg = load_config(media_root=media_root, need_media_root=False)
     return cfg, find_tool("exiftool", cfg)
 
 
@@ -26,6 +27,7 @@ def context():
     parser.add_argument("--media-root")
     args, _ = parser.parse_known_args(sys.argv[1:])
     cfg, exiftool = _load(args.media_root)
+    cfg.mounts = {name: m.root for name, m in mounts_by_drive(cfg.state_path).items()}  # what is plugged in right now
     if "state" not in st.session_state:
         st.session_state.state = State.load(cfg.state_path)
     return cfg, exiftool, st.session_state.state
@@ -53,6 +55,6 @@ def vocabulary(cfg):
     return entries, {e.keyword: e for e in entries}
 
 
-@st.cache_data(show_spinner="Preparing thumbnail ...", max_entries=500)
-def photo_thumb(path, _cfg, _exiftool):
-    return str(thumbnail(path, _cfg, _exiftool))
+def photo_thumb(cfg, exiftool, key, entry):
+    """The cached preview of a photo; made now (the drive must be plugged in) when it is not there yet."""
+    return str(cached_thumbnail(cfg, key, entry) or thumbnail(cfg, key, entry, exiftool))

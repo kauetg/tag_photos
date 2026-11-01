@@ -74,16 +74,16 @@ def test_relocate_applies_edited_rules_and_keeps_review_choices(tmp_path):
     cfg = make_cfg(tmp_path, [RAWA], [DateRule("20260301", "20260331", "Location|Philippines", "Philippines")])
     state = State(tmp_path / "state.json")
     state.files = {
-        "20260312 Rawa dive/a.arw": {"folder_date": "20260312", "location": None, "review": {"status": "approved", "keywords": [], "location": {"keyword": "Location|Mine"}}},
-        "20260320 Mystery/b.arw": {"folder_date": "20260320", "location": {"keyword": "Location|Old"}},
-        "20270101 Nowhere/c.arw": {"folder_date": "20270101", "location": None},
+        "D/20260312 Rawa dive/a.arw": {"folder_date": "20260312", "location": None, "review": {"status": "approved", "keywords": [], "location": {"keyword": "Location|Mine"}}},
+        "D/20260320 Mystery/b.arw": {"folder_date": "20260320", "location": {"keyword": "Location|Old"}},
+        "D/20270101 Nowhere/c.arw": {"folder_date": "20270101", "location": None},
     }
     counts = relocate(cfg, state)
     assert counts == {"changed": 2, "unchanged": 1, "without_location": 1}
-    assert state.files["20260312 Rawa dive/a.arw"]["location"]["source"] == "name"
-    assert state.files["20260312 Rawa dive/a.arw"]["review"]["location"] == {"keyword": "Location|Mine"}  # untouched
-    assert state.files["20260320 Mystery/b.arw"]["location"]["source"] == "date"
-    assert state.files["20270101 Nowhere/c.arw"]["location"] is None
+    assert state.files["D/20260312 Rawa dive/a.arw"]["location"]["source"] == "name"
+    assert state.files["D/20260312 Rawa dive/a.arw"]["review"]["location"] == {"keyword": "Location|Mine"}  # untouched
+    assert state.files["D/20260320 Mystery/b.arw"]["location"]["source"] == "date"
+    assert state.files["D/20270101 Nowhere/c.arw"]["location"] is None
     assert relocate(cfg, state)["changed"] == 0  # a second run has nothing left to do
 
 
@@ -97,7 +97,7 @@ def test_resolve_location_prefers_the_name_over_the_date(tmp_path):
 def test_unmapped_folders_counts_files_per_top_folder(tmp_path):
     state = State(tmp_path / "state.json")
     state.files = {
-        "A/x/1.arw": {"location": None}, "A/2.arw": {"location": None}, "B/3.arw": {"location": {"keyword": "Location|X"}},
-        "C/4.arw": {"location": None, "missing": True}, "5.arw": {"location": None},
+        "D/A/x/1.arw": {"location": None}, "D/A/2.arw": {"location": None}, "D/B/3.arw": {"location": {"keyword": "Location|X"}},
+        "D/C/4.arw": {"location": None, "missing": True}, "D/5.arw": {"location": None},
     }
-    assert dict(unmapped_folders(state)) == {"A": 2, "(root)": 1}
+    assert dict(unmapped_folders(state)) == {"D/A": 2, "D/(root)": 1}

@@ -6,6 +6,8 @@ wrote (yours from Lightroom) are left alone. RAW files get a sidecar .xmp; the o
 import pandas as pd
 import streamlit as st
 
+from mediatagger.config import DriveNotMounted
+from mediatagger.library import dive_folder
 from mediatagger.review import effective_scene
 from mediatagger.uicontext import context
 from mediatagger.vocabulary import SCENES
@@ -44,10 +46,10 @@ mode = mode_col.segmented_control(
 scene = scene_col.segmented_control(
     "Scene", SCENES, default=None, key="write_scene", format_func=str.capitalize, help="Only photos of this scene. Click again to clear.",
 )
-folders = sorted({k.split("/", 1)[0] for k in waiting})
+folders = sorted({dive_folder(k) for k in waiting})
 folder = folder_col.selectbox("Dive folder", [None, *folders], format_func=lambda f: f or "(all)", key="write_folder")
 
-scoped = candidates(state, prefix=folder, scene=scene)
+scoped = [k for k in candidates(state, prefix=folder, scene=scene) if cfg.is_mounted(k)]  # only drives that are plugged in
 never = sum(state.files[k].get("written") is None for k in scoped)
 takeback = sum(not desired_for(state.files[k])[0] for k in scoped if state.files[k].get("written") is not None)
 st.markdown(
@@ -69,7 +71,7 @@ if st.button("Check what will change", icon=":material/fact_check:", disabled=no
     for i, key in enumerate(scoped, start=1):
         try:
             plans[key] = plan_for(run_cfg, state, exiftool, key)
-        except ExiftoolError as exc:
+        except (ExiftoolError, DriveNotMounted) as exc:
             failed[key] = str(exc)
         progress.progress(i / len(scoped), text=f"Checked {i} of {len(scoped)}")
     progress.empty()
@@ -97,7 +99,7 @@ for key, error in stored["failed"].items():
 if changing:
     st.dataframe(
         pd.DataFrame(
-            [[k.rsplit("/", 1)[-1], k.split("/", 1)[0], "inside the file" if p["mode"] == "embedded" else "sidecar .xmp", describe(p)]
+            [[k.rsplit("/", 1)[-1], dive_folder(k), "inside the file" if p["mode"] == "embedded" else "sidecar .xmp", describe(p)]
              for k, p in changing.items()],
             columns=["Photo", "Dive folder", "Where", "What changes"],
         ),
@@ -119,7 +121,7 @@ if st.button(f"Write {len(plans)} files", type="primary", icon=":material/edit_n
                 problems.append(f"{key}: {'; '.join(result['problems'])}")
             else:
                 done += 1
-        except ExiftoolError as exc:
+        except (ExiftoolError, DriveNotMounted) as exc:
             state.files[key].setdefault("stages", {})["write"] = f"error: {exc}"
             problems.append(f"{key}: {exc}")
         progress.progress(i / len(plans), text=f"Wrote {i} of {len(plans)}")

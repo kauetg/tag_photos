@@ -13,7 +13,7 @@ def test_first_scan_finds_media_and_skips_catalogs(cfg):
     state, report = run(cfg)
     keys = sorted(state.files)
     assert report.new == 6
-    assert "20250122 Pereque/a.ARW" in keys
+    assert "Test/20250122 Pereque/a.ARW" in keys
     assert not any("lrdata" in k or "Old Lightroom" in k for k in keys)
     assert not any(k.endswith(".txt") for k in keys)
 
@@ -25,13 +25,13 @@ def test_keys_are_relative_posix_paths(cfg):
 
 def test_kinds_dates_and_locations(cfg):
     state, _ = run(cfg)
-    raw = state.files["20250122 Pereque/a.ARW"]
+    raw = state.files["Test/20250122 Pereque/a.ARW"]
     assert raw["kind"] == "raw"
     assert raw["folder_date"] == "20250122"
     assert raw["location"]["keyword"] == "Location|Brazil|Guaruja|Pereque"
-    assert state.files["20250122 Pereque/clip.mp4"]["kind"] == "video"
+    assert state.files["Test/20250122 Pereque/clip.mp4"]["kind"] == "video"
     # Accent-insensitive: folder says "Sao Paulo", match row says "Sao Paulo".
-    assert state.files["20241227 Sao Paulo Mercado/d.jpg"]["location"]["city"] == "Sao Paulo"
+    assert state.files["Test/20241227 Sao Paulo Mercado/d.jpg"]["location"]["city"] == "Sao Paulo"
 
 
 def test_second_scan_is_incremental(cfg):
@@ -42,11 +42,11 @@ def test_second_scan_is_incremental(cfg):
 
 def test_changed_file_is_rescanned(cfg, media):
     state, _ = run(cfg)
-    old_hash = state.files["20250122 Pereque/b.jpg"]["hash"]
+    old_hash = state.files["Test/20250122 Pereque/b.jpg"]["hash"]
     (media / "20250122 Pereque" / "b.jpg").write_bytes(b"different content")
     state, report = run(cfg)
     assert report.changed == 1
-    assert state.files["20250122 Pereque/b.jpg"]["hash"] != old_hash
+    assert state.files["Test/20250122 Pereque/b.jpg"]["hash"] != old_hash
 
 
 def test_deleted_file_is_marked_missing(cfg, media):
@@ -54,7 +54,7 @@ def test_deleted_file_is_marked_missing(cfg, media):
     os.remove(media / "20250122 Pereque" / "b.jpg")
     state, report = run(cfg)
     assert report.missing == 1
-    assert state.files["20250122 Pereque/b.jpg"]["missing"] is True
+    assert state.files["Test/20250122 Pereque/b.jpg"]["missing"] is True
 
 
 def test_limit_then_resume(cfg):
@@ -73,7 +73,7 @@ def test_dry_run_changes_nothing(cfg):
 def test_folder_restriction(cfg):
     state, report = run(cfg, folder="20250122 Pereque")
     assert report.new == 3
-    assert all(k.startswith("20250122 Pereque/") for k in state.files)
+    assert all(k.startswith("Test/20250122 Pereque/") for k in state.files)
 
 
 def test_missing_detection_stays_inside_scanned_folder(cfg, media):
@@ -86,10 +86,10 @@ def test_missing_detection_stays_inside_scanned_folder(cfg, media):
 def test_date_range_is_fallback_and_name_wins(cfg):
     state, report = run(cfg)
     # "Casinha" has no name match, but its date (20250101) falls in a range.
-    casinha = state.files["20250101 Casinha/e.mov"]["location"]
+    casinha = state.files["Test/20250101 Casinha/e.mov"]["location"]
     assert casinha["source"] == "date" and casinha["sublocation"] == "Newyear"
     # Pereque folder is dated 20250122 (inside the wide range) but the name wins.
-    pereque = state.files["20250122 Pereque/a.ARW"]["location"]
+    pereque = state.files["Test/20250122 Pereque/a.ARW"]["location"]
     assert pereque["source"] == "name"
     assert report.unmapped == {}
 

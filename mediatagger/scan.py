@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterator
 
 from .config import Config
-from .state import State
+from .state import State, split_key
 
 HASH_CHUNK = 64 * 1024
 
@@ -87,7 +87,7 @@ def relocate(cfg: Config, state: State) -> dict[str, int]:
     counts = {"changed": 0, "unchanged": 0, "without_location": 0}
     cache: dict[tuple[str, ...], dict | None] = {}
     for key, entry in state.files.items():
-        parts = tuple(Path(key).parts[:-1])
+        parts = tuple(Path(split_key(key)[1]).parts[:-1])
         if (parts, entry.get("folder_date")) not in cache:
             cache[(parts, entry.get("folder_date"))] = resolve_location(cfg, parts, entry.get("folder_date"))
         location = cache[(parts, entry.get("folder_date"))]
@@ -107,6 +107,8 @@ def scan(
     dry_run: bool = False,
     limit: int | None = None,
 ) -> ScanReport:
+    if not cfg.drive:
+        raise SystemExit("Which drive is this? Pass --drive NAME (see `tagger drives`).")
     report = ScanReport()
     seen: set[str] = set()
     visited = 0
@@ -123,7 +125,7 @@ def scan(
             visited += 1
 
             rel = Path(entry.path).relative_to(cfg.media_root)
-            key = rel.as_posix()
+            key = f"{cfg.drive}/{rel.as_posix()}"
             seen.add(key)
             stat = entry.stat()
             old = state.files.get(key)
@@ -169,7 +171,7 @@ def scan(
             if processed_since_save >= cfg.save_every:
                 state.save()
                 processed_since_save = 0
-                print(f"  ... {visited} files visited, state saved")
+                print(f"  ... {visited} files visited, index saved")
         else:
             continue
         break  # limit reached inside the inner loop
@@ -178,7 +180,10 @@ def scan(
     if limit is None:
         prefixes = [r.relative_to(cfg.media_root).as_posix() for r in roots if r.is_dir()]
         for key, entry in state.files.items():
-            in_scope = any(p in (".", "") or key.startswith(p + "/") for p in prefixes)
+            drive, rel = split_key(key)
+            if drive != cfg.drive:
+                continue
+            in_scope = any(p in (".", "") or rel.startswith(p + "/") for p in prefixes)
             if in_scope and key not in seen and not entry.get("missing"):
                 report.missing += 1
                 if not dry_run:

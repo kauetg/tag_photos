@@ -59,6 +59,7 @@ def search(
     date_from: str | None = None,
     date_to: str | None = None,
     folder: str | None = None,
+    drive: str | None = None,
 ) -> list[str]:
     """Keys of the files matching every filter; every word of `text` must match somewhere."""
     wanted = set().union(*(KINDS[k] for k in kinds)) if kinds else set()
@@ -79,6 +80,8 @@ def search(
             continue
         if folder and not key.startswith(folder + "/"):
             continue
+        if drive and not key.startswith(drive + "/"):
+            continue
         if terms:
             hay = haystack(key, entry)
             if not all(term in hay for term in terms):
@@ -88,7 +91,16 @@ def search(
 
 
 def dive_folder(key: str) -> str:
-    """The top-level folder (one dive / one day) a file lives in."""
+    """The top-level folder (one dive / one day) a file lives in, with its drive: 'Splash IV/20250101 Foo'."""
+    return "/".join(key.split("/")[:2])
+
+
+def dive_name(key: str) -> str:
+    """Just the folder name, without the drive."""
+    return key.split("/")[1] if key.count("/") >= 2 else ""
+
+
+def drive_of(key: str) -> str:
     return key.split("/", 1)[0]
 
 
@@ -102,7 +114,7 @@ def videos_near(state: State, key: str) -> list[str]:
 
 
 def filter_options(state: State) -> dict[str, list[str]]:
-    countries, cities, folders = set(), set(), set()
+    countries, cities, folders, drives = set(), set(), set(), set()
     for key, entry in state.files.items():
         if not indexed(entry):
             continue
@@ -110,7 +122,9 @@ def filter_options(state: State) -> dict[str, list[str]]:
         countries.add(location.get("country") or "")
         cities.add(location.get("city") or "")
         folders.add(dive_folder(key))
+        drives.add(drive_of(key))
     return {
+        "drive": sorted(drives),
         "country": sorted(c for c in countries if c),
         "city": sorted(c for c in cities if c),
         "folder": sorted(folders),

@@ -147,7 +147,7 @@ def new_tag_dialog(photo_key):
 left, right = st.columns([3, 2], gap="large")
 with left:
     try:
-        st.image(photo_thumb(str(cfg.media_root / key), cfg, exiftool), alt=f"Preview of {key.rsplit('/', 1)[-1]}", width="stretch")
+        st.image(photo_thumb(cfg, exiftool, key, entry), alt=f"Preview of {key.rsplit('/', 1)[-1]}", width="stretch")
     except Exception as exc:  # unreadable file: still let the user move on
         st.warning(str(exc), title="No preview")
 

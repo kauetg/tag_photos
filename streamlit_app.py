@@ -30,6 +30,7 @@ pages = st.navigation([
     st.Page("app_pages/write.py", title="Write", icon=":material/edit_note:"),
     st.Page("app_pages/vocabulary.py", title="Vocabulary", icon=":material/sell:"),
     st.Page("app_pages/locations.py", title="Locations", icon=":material/pin_drop:"),
+    st.Page("app_pages/drives.py", title="Drives", icon=":material/hard_drive:"),
 ])
 
 with st.sidebar:

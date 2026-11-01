@@ -35,7 +35,8 @@ def cfg(tmp_path, media):
     config_dir = tmp_path / "config"
     config_dir.mkdir()
     (config_dir / "config.toml").write_text(
-        f'''media_root = "{media.as_posix()}"
+        f'''drive = "Test"
+media_root = "{media.as_posix()}"
 data_dir = "{(tmp_path / "data").as_posix()}"
 save_every = 2
 [extensions]

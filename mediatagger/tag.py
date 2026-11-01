@@ -74,7 +74,7 @@ def run_tag(
         batch_keys, images = [], []
         for key in keys[start : start + BATCH_SIZE]:
             try:
-                images.append(load_image(cfg.media_root / key, cfg, exiftool))
+                images.append(load_image(cfg.path_of(key), cfg, exiftool))
                 batch_keys.append(key)
             except ImageLoadError as exc:
                 print(f"  skip {key}: {exc}")

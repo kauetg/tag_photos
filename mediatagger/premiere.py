@@ -10,10 +10,12 @@ import json
 import subprocess
 import xml.etree.ElementTree as ET
 from collections import Counter
+from typing import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
+from .config import DriveNotMounted
 from .library import format_time, matching_tags, search
 from .review import label
 from .state import State
@@ -285,7 +287,7 @@ def build_xml(items: list[tuple[Media, list[Span]]], name: str, bins: bool = Tru
 
 
 def export_selection(
-    state: State, media_root: Path, ffprobe: str, selection: dict[str, str], name: str,
+    state: State, path_of: Callable[[str], Path], ffprobe: str, selection: dict[str, str], name: str,
     pad: float = DEFAULT_PAD, bins: bool = True, whole: bool = True,
 ) -> tuple[str, dict]:
     """XML for the chosen videos. `selection` maps a state key to the search text it was picked
@@ -294,7 +296,10 @@ def export_selection(
     ordered = sorted(selection, key=lambda k: (state.files[k].get("folder_date") or "", k))
     for key in ordered:
         entry = state.files[key]
-        media = probe_media(media_root / key, ffprobe)
+        try:
+            media = probe_media(path_of(key), ffprobe)
+        except DriveNotMounted:
+            media = None
         if media is None:
             skipped.append(key)
             continue
@@ -306,11 +311,11 @@ def export_selection(
 
 
 def export_search(
-    state: State, media_root: Path, ffprobe: str, text: str = "", pad: float = DEFAULT_PAD, bins: bool = True,
+    state: State, path_of: Callable[[str], Path], ffprobe: str, text: str = "", pad: float = DEFAULT_PAD, bins: bool = True,
     whole: bool = True, **filters,
 ) -> tuple[str, dict]:
     """XML for every indexed video matching the search. Returns (xml, summary)."""
     selection = {key: text for key in search(state, text, kinds=("video",), **filters)}
     return export_selection(
-        state, media_root, ffprobe, selection, f"Search - {text}" if text else "Library export", pad, bins, whole,
+        state, path_of, ffprobe, selection, f"Search - {text}" if text else "Library export", pad, bins, whole,
     )

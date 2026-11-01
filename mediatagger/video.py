@@ -136,7 +136,7 @@ def run_strips(cfg: Config, state: State, prefix: str | None = None, limit: int 
         with tempfile.TemporaryDirectory(prefix="strip_") as tmp:
             for i, t in enumerate(times):
                 out = Path(tmp) / f"{i:02d}.jpg"
-                if extract_frame(cfg.media_root / key, t, ffmpeg, out):
+                if extract_frame(cfg.path_of(key), t, ffmpeg, out):
                     with Image.open(out) as im:
                         frames.append((t, im.convert("RGB")))
         if not frames:
@@ -174,7 +174,7 @@ def run_video(
 
     started = time.perf_counter()
     for key in keys:
-        path = cfg.media_root / key
+        path = cfg.path_of(key)
         duration = probe_duration(path, ffprobe)
         times = sample_times(duration, interval, max_frames)
         if not times:

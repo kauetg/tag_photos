@@ -80,7 +80,7 @@ def plan_for(cfg: Config, state: State, exiftool: str, key: str) -> dict:
     entry = state.files[key]
     keywords, location = desired_for(entry)
     return sync_keywords(
-        cfg.media_root / key, keywords, entry.get("written") or [], cfg, exiftool,
+        cfg.path_of(key), keywords, entry.get("written") or [], cfg, exiftool,
         location, entry.get("written_location"), dry_run=True,
     )
 
@@ -90,7 +90,7 @@ def apply_for(cfg: Config, state: State, exiftool: str, key: str) -> dict:
     entry = state.files[key]
     keywords, location = desired_for(entry)
     result = sync_keywords(
-        cfg.media_root / key, keywords, entry.get("written") or [], cfg, exiftool,
+        cfg.path_of(key), keywords, entry.get("written") or [], cfg, exiftool,
         location, entry.get("written_location"), dry_run=False,
     )
     if result.get("verified", True):

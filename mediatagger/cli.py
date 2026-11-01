@@ -27,6 +27,7 @@ def build_parser() -> argparse.ArgumentParser:
     common.add_argument("--limit", type=int, metavar="N", help="process only N items")
     common.add_argument("--folder", metavar="PATH", help="restrict to one folder (relative to media_root)")
     common.add_argument("--media-root", metavar="PATH", help="override media_root from the config")
+    common.add_argument("--drive", metavar="NAME", help="which registered drive to work on (see `tagger drives`)")
 
     parser = argparse.ArgumentParser(prog="tagger", description="Media keyword tagger")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -42,6 +43,27 @@ def build_parser() -> argparse.ArgumentParser:
     ex = sub.add_parser("export", parents=[common], help="write the suggestions to a CSV for review")
     ex.add_argument("--output", metavar="CSV", help="default: <data_dir>/review.csv")
     ex.add_argument("--threshold", type=float, default=THRESHOLD, help="min probability counted as suggested")
+
+    dr = sub.add_parser("drives", help="list the registered drives, or manage them")
+    dr_sub = dr.add_subparsers(dest="drives_command")
+    di = dr_sub.add_parser("import", help="add the drives of a tab-separated sheet (HD, Descrição, Letra ...)")
+    di.add_argument("table", metavar="TSV")
+    da = dr_sub.add_parser("add", help="register one drive")
+    da.add_argument("name")
+    da.add_argument("--label", default="")
+    da.add_argument("--location", default="")
+    da.add_argument("--status", default="")
+    da.add_argument("--contents", default="")
+    ds = dr_sub.add_parser("import-state", help="move an old state.json into the index, under one drive")
+    ds.add_argument("name", help="the drive those files are on")
+    ds.add_argument("--state", metavar="JSON", help="default: <data_dir>/state.json")
+    dc = dr_sub.add_parser("scan", help="scan a plugged-in drive, then make the previews of its photos")
+    dc.add_argument("name")
+    dp = dr_sub.add_parser("pair", help="remember the serial of a plugged-in drive (matches it by --letter)")
+    dp.add_argument("name")
+    dp.add_argument("--letter", required=True, metavar="X:")
+
+    th = sub.add_parser("thumbs", parents=[common], help="make the cached previews of a drive's photos, so they show unplugged")
 
     sub.add_parser("review", parents=[common], help="open the Streamlit review page")
 
@@ -92,9 +114,23 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _prefix(cfg, args) -> str | None:
+    """Key prefix that limits a stage to the drive (and folder) being worked on."""
+    if not cfg.drive:
+        raise SystemExit("Which drive? Pass --drive NAME (see `tagger drives`).")
+    if not args.folder:
+        return cfg.drive
+    folder = Path(args.folder)
+    rel = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    return f"{cfg.drive}/{rel}"
+
+
 def cmd_doctor(cfg) -> int:
     print(f"media_root : {cfg.media_root}  ({'ok' if cfg.media_root.exists() else 'NOT FOUND'})")
-    print(f"state file : {cfg.state_path}")
+    print(f"index      : {cfg.state_path}")
+    print(f"drive      : {cfg.drive or '(none: pass --drive)'}")
+    for name, root in sorted(cfg.mounts.items()):
+        print(f"  plugged  : {name} at {root}")
     print(f"device     : {pick_device()}")
     print(f"onnx       : {', '.join(onnx_providers())}")
     for tool in ("exiftool", "ffmpeg", "ffprobe", "dng_converter", "vlc"):
@@ -110,6 +146,14 @@ def cmd_scan(cfg, args) -> int:
     mode = " (dry run)" if args.dry_run else ""
     print(f"Scanning {', '.join(str(r) for r in roots)}{mode}")
     report = scan(cfg, state, roots, dry_run=args.dry_run, limit=args.limit)
+    if not args.dry_run and args.limit is None:
+        from . import drives as d
+
+        drive = d.get_drive(cfg.state_path, cfg.drive)
+        mount = d.mounts_by_drive(cfg.state_path).get(cfg.drive)
+        if drive and mount:
+            d.refresh_from_mount(cfg.state_path, drive, mount)
+        d.mark_scanned(cfg.state_path, cfg.drive)
 
     print(
         f"new {report.new}  changed {report.changed}  unchanged {report.unchanged}  "
@@ -173,10 +217,7 @@ def cmd_tag(cfg, args) -> int:
 
     exiftool = _exiftool_or_exit(cfg)
     state = State.load(cfg.state_path)
-    prefix = None
-    if args.folder:
-        folder = Path(args.folder)
-        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    prefix = _prefix(cfg, args)
     return run_tag(
         cfg, state, exiftool, args.model,
         prefix=prefix, limit=args.limit, dry_run=args.dry_run,
@@ -194,10 +235,7 @@ def cmd_export(cfg, args) -> int:
 def cmd_video(cfg, args) -> int:
     from .video import run_strips, run_video  # heavy imports (torch) only when needed
 
-    prefix = None
-    if args.folder:
-        folder = Path(args.folder)
-        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    prefix = _prefix(cfg, args)
     if args.strips_only:
         return run_strips(cfg, State.load(cfg.state_path), prefix=prefix, limit=args.limit, redo=args.redo)
     return run_video(
@@ -212,7 +250,7 @@ def cmd_premiere(cfg, args) -> int:
         raise SystemExit("ffprobe not found (see `doctor`).")
     try:
         xml, summary = export_search(
-            State.load(cfg.state_path), cfg.media_root, ffprobe, args.search, args.pad, bins=args.bins,
+            State.load(cfg.state_path), cfg.path_of, ffprobe, args.search, args.pad, bins=args.bins,
             whole=not args.trim,
         )
     except ValueError:
@@ -256,8 +294,57 @@ def cmd_review(cfg, args) -> int:
     import sys
 
     app = Path(__file__).resolve().parent.parent / "streamlit_app.py"
-    command = [sys.executable, "-m", "streamlit", "run", str(app), "--", "--media-root", str(cfg.media_root)]
+    command = [sys.executable, "-m", "streamlit", "run", str(app)]
     return subprocess.call(command)
+
+
+def cmd_drives(cfg, args) -> int:
+    from . import drives as d
+    from .state import import_state_json
+
+    db = cfg.state_path
+    if args.drives_command == "import":
+        added, updated = d.import_table(db, Path(args.table))
+        print(f"{added} drives added, {updated} updated")
+    elif args.drives_command == "add":
+        d.save_drive(db, d.Drive(args.name, args.label, location=args.location, status=args.status, contents=args.contents))
+        print(f"drive '{args.name}' registered")
+    elif args.drives_command == "import-state":
+        if not d.get_drive(db, args.name):
+            raise SystemExit(f"No drive named '{args.name}'. Register it first (`tagger drives add`).")
+        source = Path(args.state) if args.state else cfg.data_dir / "state.json"
+        print(f"{import_state_json(source, db, args.name)} files imported from {source} under '{args.name}'")
+    elif args.drives_command == "pair":
+        drive = d.get_drive(db, args.name)
+        mount = next((v for v in d.mounted_volumes() if v.root.drive.upper() == args.letter.upper()[:2]), None)
+        if not drive or not mount:
+            raise SystemExit("Unknown drive name, or nothing is plugged in at that letter.")
+        d.refresh_from_mount(db, drive, mount)
+        print(f"'{drive.name}' is now {mount.serial} ({mount.volume_label or 'no label'}) at {mount.root}")
+    elif args.drives_command == "scan":
+        mount = cfg.mounts.get(args.name)
+        if not d.get_drive(db, args.name) or not mount:
+            raise SystemExit(f"'{args.name}' is not registered, or not plugged in (or its serial is not paired yet).")
+        drive_cfg = load_config(media_root=str(mount), drive=args.name)
+        scan_args = argparse.Namespace(dry_run=False, limit=None, folder=None, drive=args.name)
+        cmd_scan(drive_cfg, scan_args)
+        return cmd_thumbs(drive_cfg, scan_args)
+    else:
+        counts = d.file_counts(db)
+        for drive in d.list_drives(db):
+            where = cfg.mounts.get(drive.name)
+            print(f"{drive.title:34s} {drive.location:12s} {drive.status:8s} {counts.get(drive.name, 0):7d} files  "
+                  f"{'plugged at ' + str(where) if where else 'not plugged in'}")
+    return 0
+
+
+def cmd_thumbs(cfg, args) -> int:
+    from .thumbs import make_missing
+
+    exiftool = _exiftool_or_exit(cfg)
+    made, failed = make_missing(cfg, State.load(cfg.state_path), exiftool, _prefix(cfg, args), args.limit)
+    print(f"{made} previews made, {failed} failed")
+    return 0
 
 
 def cmd_write(cfg, args) -> int:
@@ -268,10 +355,7 @@ def cmd_write(cfg, args) -> int:
         cfg = with_embedding(cfg, True)
     if args.apply:
         print(f"WRITING into {cfg.media_root}")
-    prefix = None
-    if args.folder:
-        folder = Path(args.folder)
-        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    prefix = _prefix(cfg, args)
     return run_write(
         cfg, State.load(cfg.state_path), exiftool,
         prefix=prefix, limit=args.limit, apply=args.apply, redo=args.redo,
@@ -286,7 +370,16 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in ("write-test", "show"):
         cfg = load_config(need_media_root=False)
         return cmd_show(cfg, args) if args.command == "show" else cmd_write_test(cfg, args)
-    cfg = load_config(media_root=args.media_root)
+    if args.command == "drives":
+        return cmd_drives(load_config(need_media_root=False), args)
+    media_root = args.media_root
+    if args.drive and not media_root:
+        from .drives import mounts_by_drive
+
+        config = load_config(need_media_root=False)
+        mounted = mounts_by_drive(config.state_path).get(args.drive)
+        media_root = str(mounted.root) if mounted else None
+    cfg = load_config(media_root=media_root, drive=args.drive, need_media_root=args.command in ("scan", "doctor", "thumbs"))
     if args.command == "doctor":
         return cmd_doctor(cfg)
     if args.command == "tag":
@@ -295,6 +388,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_premiere(cfg, args)
     if args.command == "video":
         return cmd_video(cfg, args)
+    if args.command == "thumbs":
+        return cmd_thumbs(cfg, args)
     if args.command == "relocate":
         return cmd_relocate(cfg, args)
     if args.command == "triage":

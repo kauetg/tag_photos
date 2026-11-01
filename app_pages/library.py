@@ -1,11 +1,11 @@
 """Library page: search photos and videos by tag, place, date and folder, then open them.
 
-Read-only: it only reads state.json and the thumbnails; the media files are never changed.
+Read-only: it only reads the index (data/index.db) and the thumbnails; the media files are never changed.
 """
 import streamlit as st
 
 from mediatagger.library import (
-    dive_folder, filter_options, format_time, indexed, matching_tags, open_file, open_in_vlc, reveal_in_folder,
+    dive_name, drive_of, filter_options, format_time, indexed, matching_tags, open_file, open_in_vlc, reveal_in_folder,
     search, videos_near,
 )
 from mediatagger.scrub import scrub
@@ -49,6 +49,7 @@ with st.sidebar:
         format_func=str.capitalize, help="What the model saw, or what you picked in the review. Click again to clear.",
     )
     country = st.selectbox("Country", [None, *options["country"]], format_func=lambda c: c or "(all)", key="lib_country", on_change=first_page)
+    drive = st.selectbox("Drive", [None, *options["drive"]], format_func=lambda d: d or "(all)", key="lib_drive", on_change=first_page)
     folder = st.selectbox("Dive folder", [None, *options["folder"]], format_func=lambda f: f or "(all)", key="lib_folder", on_change=first_page)
     dates = st.date_input("Dates", value=(), format="YYYY-MM-DD", key="lib_dates", on_change=first_page)
 
@@ -57,7 +58,7 @@ if len(dates) == 2:
     date_from, date_to = (d.strftime("%Y%m%d") for d in dates)
 
 keys = search(
-    state, text, tuple(kinds or ()), country=country, scene=scene, folder=folder, date_from=date_from, date_to=date_to,
+    state, text, tuple(kinds or ()), country=country, scene=scene, folder=folder, drive=drive, date_from=date_from, date_to=date_to,
 )
 
 video_keys = [k for k in keys if state.files[k]["kind"] == "video"]
@@ -100,7 +101,7 @@ with st.sidebar:
 
     def selected_xml():
         xml, _ = export_selection(
-            state, cfg.media_root, ffprobe, selection, "Selected videos", pad, bins, clips != "trimmed",
+            state, cfg.path_of, ffprobe, selection, "Selected videos", pad, bins, clips != "trimmed",
         )
         return xml
 
@@ -176,10 +177,18 @@ def export_checkbox(key, scope):
 
 def open_buttons(key, scope, stacked=False):
     """Open the file / show it in its folder. `stacked` puts them one above the other (narrow grid cards)."""
-    path = cfg.media_root / key
+    plugged = cfg.is_mounted(key)
+    path = cfg.path_of(key) if plugged else None
     left, right = (st.container(), st.container()) if stacked else st.columns(2)
-    left.button("Open file", icon=":material/play_circle:", key=f"open:{scope}:{key}", width="stretch", on_click=open_file, args=(path,))
-    right.button("Show in folder", icon=":material/folder_open:", key=f"reveal:{scope}:{key}", width="stretch", on_click=reveal_in_folder, args=(path,))
+    left.button("Open file", icon=":material/play_circle:", key=f"open:{scope}:{key}", width="stretch", on_click=open_file, args=(path,), disabled=not plugged)
+    right.button("Show in folder", icon=":material/folder_open:", key=f"reveal:{scope}:{key}", width="stretch", on_click=reveal_in_folder, args=(path,), disabled=not plugged)
+    if not plugged:
+        st.caption(f"Plug in {drive_of(key)} to open it.", help="The preview and tags above come from the index.")
+
+
+def where(key):
+    """'Splash IV · 20250101 Foo', with a plug icon when the drive is connected right now."""
+    return f"{':material/usb:' if cfg.is_mounted(key) else ':material/usb_off:'} {drive_of(key)} · {dive_name(key)}"
 
 
 def place_of(entry):
@@ -206,7 +215,7 @@ def render_media(key, entry, name, hint=True, crop=False):
             best = hits[0]["best_t"] if hits else entry["video"]["duration"] / 2
             scrub(
                 cfg.data_dir / "thumbs" / strip["file"], strip, entry["video"]["duration"], marks, best,
-                key=f"scrub:{key}", on_pick=lambda seconds, key=key: open_in_vlc(cfg.media_root / key, seconds, vlc),
+                key=f"scrub:{key}", on_pick=lambda seconds, key=key: cfg.is_mounted(key) and open_in_vlc(cfg.path_of(key), seconds, vlc),
             )
             if hint:
                 st.caption("Move the mouse to browse, click to play in VLC.")
@@ -214,7 +223,7 @@ def render_media(key, entry, name, hint=True, crop=False):
             if entry["kind"] == "video":
                 shot = cfg.data_dir / "thumbs" / entry["video"]["thumb"]
             else:
-                shot = photo_thumb(str(cfg.media_root / key), cfg, exiftool)
+                shot = photo_thumb(cfg, exiftool, key, entry)
             st.image(str(cover(shot) if crop else shot), alt=f"Preview of {name}", width="stretch")
     except Exception:  # an unreadable file should not break the whole page
         st.caption("no preview")
@@ -231,7 +240,7 @@ def render_list_card(key):
         with info:
             kind = "Video" if entry["kind"] == "video" else "Photo"
             st.subheader(name, anchor=False)
-            st.caption(f"{kind} · {dive_folder(key)} · {place}")
+            st.caption(f"{kind} · {where(key)} · {place}")
             if entry["kind"] == "video":
                 st.caption(f"{format_time(entry['video']['duration'])} long, one frame every {entry['video']['interval']:.0f} s")
                 for line in moments(entry, query_of(key)):
@@ -262,7 +271,7 @@ def render_grid_card(key):
         render_media(key, entry, name, hint=False, crop=True)
         st.markdown(f"**{name}**")
         meta = f"{format_time(entry['video']['duration'])} · " if is_video else ""
-        st.caption(f"{meta}{place_of(entry)} · {dive_folder(key)[:8]}")
+        st.caption(f"{meta}{place_of(entry)} · {where(key)[:60]}")
         if is_video:
             shown = [label(t["keyword"]) for t in matching_tags(entry, query_of(key))[:3]]
         else:

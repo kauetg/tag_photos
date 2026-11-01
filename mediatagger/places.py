@@ -9,7 +9,7 @@ from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import normalize, parse_folder_date
-from .state import State
+from .state import State, split_key
 
 NAME_COLUMNS = ["match", "keyword", "country", "city", "sublocation"]
 DATE_COLUMNS = ["start", "end", "keyword", "country", "city", "sublocation", "note"]
@@ -158,5 +158,6 @@ def unmapped_folders(state: State) -> Counter:
     counts: Counter = Counter()
     for key, entry in state.files.items():
         if not entry.get("missing") and not entry.get("location"):
-            counts[key.split("/", 1)[0] if "/" in key else "(root)"] += 1
+            drive, rel = split_key(key)
+            counts[f"{drive}/{rel.split('/', 1)[0]}" if "/" in rel else f"{drive}/(root)"] += 1
     return counts
