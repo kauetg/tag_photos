@@ -98,8 +98,9 @@ python tagger.py video --limit 5
 python tagger.py review                  # opens the app in the browser
 ```
 
-Time a small run first (`--limit`) and multiply, so you know how long the whole archive will take. On a graphics
-card it is much faster than on the processor.
+`tag` and `video` print the time per file when they finish (for example "20 photos in 31 s (1.6 s each)"). Multiply
+that by the size of the archive to know how long a full run takes; model loading is not counted, it only happens
+once per command. On a graphics card it is much faster than on the processor.
 
 For the first **write**, use a *copy* of a folder (copy it somewhere else and point `--media-root` at the copy).
 

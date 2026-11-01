@@ -8,6 +8,7 @@ from __future__ import annotations
 import math
 import subprocess
 import tempfile
+import time
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -19,6 +20,7 @@ from .device import pick_device
 from .review import THRESHOLD
 from .state import State
 from .thumbs import thumb_path
+from .timing import timing_line
 from .tools import find_tool
 from .vocabulary import load_vocabulary
 
@@ -170,6 +172,7 @@ def run_video(
     print(f"Loading hybrid on {device} ({len(vocabulary)} vocabulary rows) ...")
     tagger = HybridTagger(device, vocabulary)
 
+    started = time.perf_counter()
     for key in keys:
         path = cfg.media_root / key
         duration = probe_duration(path, ffprobe)
@@ -224,5 +227,5 @@ def run_video(
         top = ", ".join(f"{t['keyword'].split('|')[-1]} x{t['hits']}" for t in summary["tags"][:4]) or "(nothing clear)"
         print(f"{Path(key).name:34s} {duration:7.1f}s {len(frames):3d} frames | {top}")
 
-    print(f"{len(keys)} videos processed" + (" (dry run, nothing saved)" if dry_run else ""))
+    print(timing_line(len(keys), time.perf_counter() - started, "videos") + (" (dry run, nothing saved)" if dry_run else ""))
     return 0

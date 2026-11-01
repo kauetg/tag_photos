@@ -1,6 +1,7 @@
 """tag: classify photos (scene gate + vocabulary suggestions) and store them in state.json."""
 from __future__ import annotations
 
+import time
 from pathlib import Path
 
 from .classify import HybridTagger, Tagger
@@ -9,6 +10,7 @@ from .device import pick_device
 from .imaging import ImageLoadError, load_image
 from .review import apply_triage
 from .state import State
+from .timing import timing_line
 from .vocabulary import load_vocabulary
 
 IMAGE_KINDS = {"photo", "raw"}
@@ -66,6 +68,7 @@ def run_tag(
     print(f"Loading {model_key} on {device} ({len(vocabulary)} vocabulary rows) ...")
     tagger = HybridTagger(device, vocabulary) if model_key == "hybrid" else Tagger(model_key, device, vocabulary)
 
+    started = time.perf_counter()
     done = 0
     for start in range(0, len(keys), BATCH_SIZE):
         batch_keys, images = [], []
@@ -99,5 +102,5 @@ def run_tag(
     if not dry_run:
         print(describe_triage(apply_triage(state)))
         state.save()
-    print(f"{len(keys)} files processed" + (" (dry run, nothing saved)" if dry_run else ""))
+    print(timing_line(len(keys), time.perf_counter() - started, "photos") + (" (dry run, nothing saved)" if dry_run else ""))
     return 0
