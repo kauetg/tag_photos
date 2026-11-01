@@ -23,9 +23,11 @@ raw = [".arw", ".dng", ".gpr"]
 video = [".mp4", ".mov"]
 
 [write]
-# Extensions that get keywords embedded in the file; everything else
-# (RAW, video) gets a sidecar .xmp next to it and the original is never touched.
-embedded = [".jpg", ".jpeg", ".dng"]
+# Extensions that get keywords embedded in the file; everything else gets a sidecar .xmp next to it
+# and the original is never touched. Empty = sidecar for every format (the safest).
+# Caveat: Lightroom stores JPG/DNG metadata inside the file and may not read a sidecar next to them,
+# so those tags might not show up there. Use [".jpg", ".jpeg", ".dng"] to embed them instead.
+embedded = []
 # exiftool keeps a "<file>_original" backup of embedded writes unless this is true.
 # Turn it on only after the write tests are validated (it would double 4 TB otherwise).
 overwrite_original = false

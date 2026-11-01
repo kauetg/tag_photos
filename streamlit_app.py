@@ -13,7 +13,9 @@ cfg, _, _ = context()
 pages = st.navigation([
     st.Page("app_pages/library.py", title="Library", icon=":material/search:", default=True),
     st.Page("app_pages/review.py", title="Review tags", icon=":material/checklist:"),
+    st.Page("app_pages/write.py", title="Write", icon=":material/edit_note:"),
     st.Page("app_pages/vocabulary.py", title="Vocabulary", icon=":material/sell:"),
+    st.Page("app_pages/locations.py", title="Locations", icon=":material/pin_drop:"),
 ])
 
 with st.sidebar:

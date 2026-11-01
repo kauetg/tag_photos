@@ -72,6 +72,34 @@ def _folder_date(parts: tuple[str, ...]) -> str | None:
     return None
 
 
+def resolve_location(cfg: Config, folder_parts: tuple[str, ...], folder_date: str | None) -> dict | None:
+    """Folder name first; the date range is only a fallback. None when neither knows the place."""
+    by_name = cfg.find_location(folder_parts)
+    by_date = None if by_name else cfg.find_location_by_date(folder_date)
+    return by_name.as_dict("name") if by_name else by_date.as_dict("date") if by_date else None
+
+
+def relocate(cfg: Config, state: State) -> dict[str, int]:
+    """Re-run the location rules over every file already in the state (after editing the CSVs).
+
+    Only the folder/date location is recomputed; a place you picked in the review page is kept.
+    """
+    counts = {"changed": 0, "unchanged": 0, "without_location": 0}
+    cache: dict[tuple[str, ...], dict | None] = {}
+    for key, entry in state.files.items():
+        parts = tuple(Path(key).parts[:-1])
+        if (parts, entry.get("folder_date")) not in cache:
+            cache[(parts, entry.get("folder_date"))] = resolve_location(cfg, parts, entry.get("folder_date"))
+        location = cache[(parts, entry.get("folder_date"))]
+        if location != entry.get("location"):
+            entry["location"] = location
+            counts["changed"] += 1
+        else:
+            counts["unchanged"] += 1
+        counts["without_location"] += location is None
+    return counts
+
+
 def scan(
     cfg: Config,
     state: State,
@@ -110,14 +138,7 @@ def scan(
             folder_parts = rel.parts[:-1]
             folder_date = _folder_date(folder_parts)
             if folder_parts not in location_cache:
-                # Folder name first; the date range is only a fallback.
-                by_name = cfg.find_location(folder_parts)
-                by_date = None if by_name else cfg.find_location_by_date(folder_date)
-                location_cache[folder_parts] = (
-                    by_name.as_dict("name") if by_name
-                    else by_date.as_dict("date") if by_date
-                    else None
-                )
+                location_cache[folder_parts] = resolve_location(cfg, folder_parts, folder_date)
             location = location_cache[folder_parts]
             if location is None:
                 report.unmapped[folder_parts[0] if folder_parts else "(root)"] += 1

@@ -1,6 +1,6 @@
-"""Write keywords with exiftool: embedded for JPEG/DNG, sidecar .xmp for RAW and video.
+"""Write keywords with exiftool: embedded for the extensions in the config, sidecar .xmp for the rest.
 
-Keywords are only ever appended. Location fields are only filled when empty.
+`write_keywords` only appends. `sync_keywords` also removes, but only what this tool wrote before.
 """
 from __future__ import annotations
 
@@ -156,6 +156,106 @@ def write_keywords(
         loc_args.append(str(target))
         run_exiftool(exiftool, loc_args)
 
+    log_write(cfg, result)
+    return result
+
+
+LOCATION_TAGS = {
+    "country": "XMP-photoshop:Country",
+    "city": "XMP-photoshop:City",
+    "sublocation": "XMP-iptcCore:Location",
+}
+
+
+def sync_keywords(
+    path: Path,
+    desired: list[str],
+    previous: list[str],
+    cfg: Config,
+    exiftool: str,
+    location: dict | None = None,
+    previous_location: dict | None = None,
+    dry_run: bool = False,
+) -> dict:
+    """Make the file's keywords match `desired`, touching only what this tool wrote before.
+
+    `previous` is what we wrote last time: those keywords are removed if no longer desired. Keywords we
+    never wrote (yours from Lightroom, say) are never removed. A flat keyword is only removed when no other
+    hierarchical keyword in the file still uses it. Location fields are created when empty, and changed or
+    cleared only while they still hold the value we wrote (`previous_location`; None = unknown, create only).
+    Returns what was (or, in a dry run, would be) done; with a real write it also reads the file back.
+    """
+    embedded = is_embedded(path, cfg)
+    target = path if embedded else sidecar_path(path)
+    use_iptc = embedded and path.suffix.lower() in IPTC_EXTS
+
+    existing = read_back(path, cfg, exiftool)
+    have_subject = _as_list(existing.get("XMP-dc:Subject"))
+    have_hier = _as_list(existing.get("XMP-lr:HierarchicalSubject"))
+    have_iptc = _as_list(existing.get("IPTC:Keywords"))
+
+    add_hier = [h for h in desired if h not in have_hier]
+    remove_hier = [h for h in previous if h not in desired and h in have_hier]
+    still_used = set(flat_keywords([h for h in have_hier if h not in remove_hier] + add_hier))
+    flat_add = [k for k in flat_keywords(desired) if k not in have_subject]
+    flat_remove = [k for k in flat_keywords(remove_hier) if k in have_subject and k not in still_used]
+    iptc_add = [k for k in flat_keywords(desired) if k not in have_iptc] if use_iptc else []
+    iptc_remove = [k for k in flat_keywords(remove_hier) if k in have_iptc and k not in still_used] if use_iptc else []
+
+    loc_set: dict[str, str] = {}
+    loc_clear: list[str] = []
+    for name, tag in LOCATION_TAGS.items():
+        want = (location or {}).get(name, "")
+        have = str(existing.get(tag) or "")
+        written = None if previous_location is None else previous_location.get(name, "")
+        if want:
+            if not have or (have != want and written is not None and have == written):
+                loc_set[tag] = want
+        elif have and written and have == written:
+            loc_clear.append(tag)
+
+    result = {
+        "file": str(path),
+        "mode": "embedded" if embedded else "sidecar",
+        "target": str(target),
+        "add": add_hier,
+        "remove": remove_hier,
+        "location_set": loc_set,
+        "location_clear": loc_clear,
+        "time": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "dry_run": dry_run,
+    }
+    result["nothing_to_do"] = not (add_hier or remove_hier or flat_add or flat_remove or iptc_add or iptc_remove or loc_set or loc_clear)
+    if dry_run or result["nothing_to_do"]:
+        return result
+
+    overwrite = ["-overwrite_original"] if (not embedded or cfg.overwrite_original) else []
+    if cfg.ignore_minor_errors:
+        overwrite = ["-m", *overwrite]
+    if not embedded and not target.exists():
+        target.write_text(EMPTY_XMP, encoding="utf-8")
+
+    args = list(overwrite)
+    args += [f"-XMP-dc:Subject-={k}" for k in flat_remove]
+    args += [f"-XMP-lr:HierarchicalSubject-={h}" for h in remove_hier]
+    args += [f"-XMP-dc:Subject+={k}" for k in flat_add]
+    args += [f"-XMP-lr:HierarchicalSubject+={h}" for h in add_hier]
+    if iptc_add or iptc_remove:
+        args.append("-IPTC:CodedCharacterSet=UTF8")
+        args += [f"-IPTC:Keywords-={k}" for k in iptc_remove]
+        args += [f"-IPTC:Keywords+={k}" for k in iptc_add]
+    args += [f"-{tag}={value}" for tag, value in loc_set.items()]
+    args += [f"-{tag}=" for tag in loc_clear]
+    args.append(str(target))
+    run_exiftool(exiftool, args)
+
+    after = read_back(path, cfg, exiftool)
+    after_hier = _as_list(after.get("XMP-lr:HierarchicalSubject"))
+    problems = [f"missing after write: {h}" for h in add_hier if h not in after_hier]
+    problems += [f"still there after write: {h}" for h in remove_hier if h in after_hier]
+    problems += [f"{tag} is not {value!r} after write" for tag, value in loc_set.items() if str(after.get(tag) or "") != value]
+    result["verified"] = not problems
+    result["problems"] = problems
     log_write(cfg, result)
     return result
 

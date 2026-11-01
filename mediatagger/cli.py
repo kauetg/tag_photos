@@ -8,7 +8,7 @@ from .config import load_config
 from .device import onnx_providers, pick_device
 from .premiere import DEFAULT_PAD, export_search
 from .review import AUTO_THRESHOLD, THRESHOLD, apply_triage, export_csv
-from .scan import resolve_roots, scan, write_unmapped_report
+from .scan import relocate, resolve_roots, scan, write_unmapped_report
 from .state import State
 from .tools import find_tool
 from .video import INTERVAL, MAX_FRAMES
@@ -60,13 +60,17 @@ def build_parser() -> argparse.ArgumentParser:
     pr.add_argument("--bins", action=argparse.BooleanOptionalAction, default=True,
                     help="put the trimmed clips in one bin per category (default on)")
 
+    sub.add_parser("relocate", parents=[common], help="re-apply locations.csv and date_ranges.csv to files already scanned")
+
     tr = sub.add_parser("triage", parents=[common], help="auto-approve clear photos, leave the uncertain for review")
     tr.add_argument("--auto", type=float, default=AUTO_THRESHOLD, help="core tags at least this likely are automatic")
     tr.add_argument("--uncertain", type=float, default=THRESHOLD, help="core tags from here up to --auto need review")
 
     wr = sub.add_parser("write", parents=[common], help="write approved keywords into photos (simulation unless --apply)")
     wr.add_argument("--apply", action="store_true", help="really write; without it nothing is changed")
-    wr.add_argument("--redo", action="store_true", help="write again even if already written")
+    wr.add_argument("--redo", action="store_true", help="also check photos that look up to date")
+    wr.add_argument("--embed", action="store_true",
+                    help="embed in JPG/DNG instead of a sidecar (Lightroom only reads those embedded; the file is rewritten)")
 
     wt = sub.add_parser("write-test", help="append keywords to specific files, then read them back")
     wt.add_argument("files", nargs="+", metavar="FILE")
@@ -224,6 +228,18 @@ def cmd_premiere(cfg, args) -> int:
     return 0
 
 
+def cmd_relocate(cfg, args) -> int:
+    state = State.load(cfg.state_path)
+    counts = relocate(cfg, state)
+    print(
+        f"{counts['changed']} files got a different place, {counts['unchanged']} unchanged, "
+        f"{counts['without_location']} still without a place" + (" (dry run, nothing saved)" if args.dry_run else "")
+    )
+    if not args.dry_run:
+        state.save()
+    return 0
+
+
 def cmd_triage(cfg, args) -> int:
     from .tag import describe_triage
 
@@ -245,9 +261,11 @@ def cmd_review(cfg, args) -> int:
 
 
 def cmd_write(cfg, args) -> int:
-    from .write import run_write
+    from .write import run_write, with_embedding
 
     exiftool = _exiftool_or_exit(cfg)
+    if args.embed:
+        cfg = with_embedding(cfg, True)
     if args.apply:
         print(f"WRITING into {cfg.media_root}")
     prefix = None
@@ -277,6 +295,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_premiere(cfg, args)
     if args.command == "video":
         return cmd_video(cfg, args)
+    if args.command == "relocate":
+        return cmd_relocate(cfg, args)
     if args.command == "triage":
         return cmd_triage(cfg, args)
     if args.command == "write":

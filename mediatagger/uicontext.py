@@ -31,6 +31,11 @@ def context():
     return cfg, exiftool, st.session_state.state
 
 
+def reload_config() -> None:
+    """Forget the cached config so edited CSVs (locations, date ranges) are read again on the next run."""
+    _load.clear()
+
+
 def reload_state(cfg) -> None:
     """Pick up what the command line wrote meanwhile (tag, video, triage ...)."""
     st.session_state.state = State.load(cfg.state_path)
