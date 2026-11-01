@@ -7,7 +7,8 @@ import shutil
 from dataclasses import dataclass
 from pathlib import Path
 
-SCENES = ("underwater", "topside", "land")
+SCENES = ("underwater", "drone", "land")
+LEGACY_SCENES = {"topside": "drone"}  # the old name, still understood when reading an old vocabulary.csv
 TIERS = ("core", "species", "manual")
 COLUMNS = ["keyword", "prompt", "scientific_name", "scene", "tier", "aliases"]
 
@@ -17,7 +18,7 @@ class VocabEntry:
     keyword: str  # hierarchical, e.g. "Marine Life|Reptiles|Sea turtle"
     prompt: str  # natural-language description for generic CLIP
     scientific_name: str  # used instead of the prompt by BioCLIP when present
-    scenes: frozenset[str]  # underwater / topside / land
+    scenes: frozenset[str]  # underwater / drone / land
     tier: str  # "core" (groups), "species", or "manual" (only ever applied by hand)
     aliases: tuple[str, ...] = ()  # other words that should find this tag when typing
 
@@ -34,7 +35,9 @@ def load_vocabulary(path: Path, tiers: set[str] | None = None) -> list[VocabEntr
                     keyword=row["keyword"].strip(),
                     prompt=(row.get("prompt") or "").strip(),
                     scientific_name=(row.get("scientific_name") or "").strip(),
-                    scenes=frozenset(s.strip() for s in (row.get("scene") or "").split(";") if s.strip()),
+                    scenes=frozenset(
+                        LEGACY_SCENES.get(s.strip(), s.strip()) for s in (row.get("scene") or "").split(";") if s.strip()
+                    ),
                     tier=tier,
                     aliases=tuple(a.strip() for a in (row.get("aliases") or "").split(";") if a.strip()),
                 )

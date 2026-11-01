@@ -12,7 +12,7 @@ def test_real_vocabulary_is_well_formed():
     assert len(rows) > 100
     assert {r.tier for r in rows} <= {"core", "species", "manual"}
     assert any(r.tier == "manual" for r in rows) and any("cots" in r.aliases for r in rows)
-    assert all(r.scenes <= {"underwater", "topside", "land"} and r.scenes for r in rows)
+    assert all(r.scenes <= {"underwater", "drone", "land"} and r.scenes for r in rows)
     assert all(r.keyword and r.prompt for r in rows)
     assert len({r.keyword for r in rows}) == len(rows)  # no duplicate keywords
 
@@ -38,6 +38,21 @@ def test_jpeg_loads_as_rgb_and_is_shrunk(tmp_path, cfg):
     image = load_image(jpg, cfg, exiftool="unused", max_side=512)
     assert image.mode == "RGB"
     assert max(image.size) == 512
+
+
+def test_cover_crop_gives_every_thumbnail_the_same_shape(tmp_path):
+    from PIL import Image
+
+    from mediatagger.thumbs import cover
+
+    for name, size in (("portrait", (300, 600)), ("wide", (800, 200)), ("exact", (640, 360))):
+        src = tmp_path / f"{name}.jpg"
+        Image.new("RGB", size, (50, 100, 150)).save(src)
+        out = cover(src)
+        with Image.open(out) as image:
+            assert abs(image.width / image.height - 16 / 9) < 0.05
+        assert out.name == f"{name}_cover.jpg"
+    assert cover(tmp_path / "portrait.jpg") == tmp_path / "portrait_cover.jpg"  # second call reuses the file
 
 
 def test_preview_without_orientation_follows_the_raw(monkeypatch):

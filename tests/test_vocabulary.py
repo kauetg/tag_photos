@@ -50,6 +50,35 @@ def test_a_bad_vocabulary_is_never_written(tmp_path):
     assert [e.keyword for e in load_vocabulary(path)] == ["A|B"]  # the good file is untouched
 
 
+def test_old_topside_name_is_read_as_drone(tmp_path):
+    path = tmp_path / "vocabulary.csv"
+    path.write_text(
+        "keyword,prompt,scientific_name,scene,tier,aliases\nScene|Beach,a beach,,topside;land,core,\n", encoding="utf-8"
+    )
+    (beach,) = load_vocabulary(path)
+    assert beach.scenes == frozenset({"drone", "land"}) and validate([beach]) == []
+
+
+def test_state_load_renames_the_old_scene_everywhere(tmp_path):
+    import json
+
+    from mediatagger.state import State
+
+    path = tmp_path / "state.json"
+    files = {
+        "a/photo.arw": {"kind": "raw", "tags": {"scene": {"underwater": 0.1, "topside": 0.9}}, "review": {"status": "approved", "scene": "topside"}},
+        "a/clip.mp4": {"kind": "video", "video": {"scene": {"topside": 0.6, "land": 0.4}}},
+    }
+    path.write_text(json.dumps({"version": 1, "files": files}), encoding="utf-8")
+    state = State.load(path)
+    assert state.files["a/photo.arw"]["tags"]["scene"] == {"underwater": 0.1, "drone": 0.9}
+    assert state.files["a/photo.arw"]["review"]["scene"] == "drone"
+    assert state.files["a/clip.mp4"]["video"]["scene"] == {"drone": 0.6, "land": 0.4}
+    State.load(path)  # already migrated data loads unchanged
+    state.save()
+    assert "topside" not in path.read_text(encoding="utf-8")
+
+
 def test_add_manual_tag(tmp_path):
     path = tmp_path / "vocabulary.csv"
     save_vocabulary(path, [entry("Conservation|Impact|Marine debris")])

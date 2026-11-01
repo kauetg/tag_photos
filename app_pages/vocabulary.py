@@ -59,7 +59,7 @@ edited = st.data_editor(
         "keyword": st.column_config.TextColumn("Keyword (A|B|C)", width="large", required=True),
         "prompt": st.column_config.TextColumn("What the model looks for", width="large"),
         "scientific_name": st.column_config.TextColumn("Scientific name"),
-        "scene": st.column_config.TextColumn("Scene", help="underwater; topside; land"),
+        "scene": st.column_config.TextColumn("Scene", help="underwater; drone; land"),
         "tier": st.column_config.SelectboxColumn("Tier", options=list(TIERS), required=True),
         "aliases": st.column_config.TextColumn("Aliases", width="medium"),
     },

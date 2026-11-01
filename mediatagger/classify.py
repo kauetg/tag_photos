@@ -16,7 +16,7 @@ SCENE_PROMPTS = {
         "a photo of a coral reef underwater",
         "a photo of fish swimming in blue water",
     ],
-    "topside": [
+    "drone": [
         "a photo of the sea surface with a boat",
         "an aerial drone photo of an island and the ocean",
         "a photo of a tropical beach at sunset",

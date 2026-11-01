@@ -11,7 +11,7 @@ def make_state(tmp_path):
             "kind": "raw",
             "location": {"country": "Philippines", "city": "Siquijor"},
             "tags": {
-                "scene": {"underwater": 0.9, "topside": 0.1},
+                "scene": {"underwater": 0.9, "drone": 0.1},
                 "suggestions": [
                     {"keyword": "Marine Life|Reptiles|Sea turtle", "prob": 0.98, "tier": "core"},
                     {"keyword": "Marine Life|Reptiles|Sea turtle|Green sea turtle", "prob": 0.4, "tier": "species"},
@@ -104,6 +104,21 @@ def test_review_location_overrides_the_folder_location():
     assert effective_location(entry)["city"] == "Siquijor"
     decide(entry, [], approved=False, location={"keyword": "x"})  # a skip never stores a place
     assert "location" not in entry["review"]
+
+
+def test_scene_is_detected_from_photos_and_videos_and_can_be_overridden():
+    from mediatagger.review import detected_scene, effective_scene
+
+    photo = tagged()
+    photo["tags"]["scene"] = {"underwater": 0.1, "drone": 0.8, "land": 0.1}
+    assert detected_scene(photo) == "drone"
+    video = {"kind": "video", "video": {"scene": {"underwater": 0.7, "drone": 0.2, "land": 0.1}}}
+    assert detected_scene(video) == "underwater"
+    assert detected_scene({"kind": "raw"}) is None
+    decide(photo, [], approved=True, scene="underwater")  # the person says it is actually underwater
+    assert effective_scene(photo) == "underwater" and detected_scene(photo) == "drone"
+    decide(photo, [], approved=False, scene="land")  # a skip never stores a scene
+    assert effective_scene(photo) == "drone"
 
 
 def test_apply_triage_only_new_leaves_existing_reviews_alone(tmp_path):

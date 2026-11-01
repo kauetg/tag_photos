@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from .config import normalize
-from .review import AUTO, APPROVED, effective_location, status, suggested
+from .review import AUTO, APPROVED, effective_location, effective_scene, status, suggested
 from .state import State
 
 KINDS = {"video": {"video"}, "photo": {"photo", "raw"}}
@@ -55,6 +55,7 @@ def search(
     kinds: tuple[str, ...] = ("video", "photo"),
     country: str | None = None,
     city: str | None = None,
+    scene: str | None = None,
     date_from: str | None = None,
     date_to: str | None = None,
     folder: str | None = None,
@@ -70,6 +71,8 @@ def search(
         if country and location.get("country") != country:
             continue
         if city and location.get("city") != city:
+            continue
+        if scene and effective_scene(entry) != scene:
             continue
         date = entry.get("folder_date") or ""
         if (date_from and date < date_from) or (date_to and date > date_to):

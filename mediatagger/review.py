@@ -77,11 +77,26 @@ def apply_triage(
     return counts
 
 
-def decide(entry: dict, keywords: list[str], approved: bool, location: dict | None = None) -> None:
-    """Store the human decision. `location` is set only when the person changed the place."""
+def decide(
+    entry: dict, keywords: list[str], approved: bool, location: dict | None = None, scene: str | None = None,
+) -> None:
+    """Store the human decision. `location` and `scene` are set only when the person changed them."""
     entry["review"] = {"status": APPROVED if approved else SKIPPED, "keywords": keywords if approved else []}
     if approved and location:
         entry["review"]["location"] = location
+    if approved and scene:
+        entry["review"]["scene"] = scene
+
+
+def detected_scene(entry: dict) -> str | None:
+    """The scene the model saw: the likeliest of underwater / drone / land (a video's is the average of its frames)."""
+    probs = (entry.get("video") or {}).get("scene") if entry.get("kind") == "video" else (entry.get("tags") or {}).get("scene")
+    return max(probs, key=probs.get) if probs else None
+
+
+def effective_scene(entry: dict) -> str | None:
+    """The scene to use: the one picked in review, else the one the model detected."""
+    return (entry.get("review") or {}).get("scene") or detected_scene(entry)
 
 
 def effective_location(entry: dict) -> dict:

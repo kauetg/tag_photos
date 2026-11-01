@@ -1,4 +1,4 @@
-﻿from mediatagger.library import dive_folder, format_time, matching_tags, search, videos_near
+from mediatagger.library import dive_folder, format_time, matching_tags, search, videos_near
 from mediatagger.review import decide
 from mediatagger.state import State
 
@@ -51,6 +51,19 @@ def test_photo_review_decides_what_is_searchable(tmp_path):
     decide(photo, [], approved=True)  # reviewer ticked nothing
     assert "20260125 Siqui/photo/img1.arw" not in search(state, "turtle")
     assert "20260125 Siqui/photo/img1.arw" in search(state, "siquijor")  # location still counts
+
+
+def test_scene_filter_uses_the_detected_scene_or_the_one_you_picked(tmp_path):
+    state = make_state(tmp_path)
+    photo = state.files["20260125 Siqui/photo/img1.arw"]
+    photo["tags"]["scene"] = {"underwater": 0.9, "drone": 0.1}
+    state.files["20260125 Siqui/video/clip.mp4"]["video"]["scene"] = {"underwater": 0.2, "drone": 0.8}
+    state.files["20260713 Komodo/video/manta.mp4"]["video"]["scene"] = {"underwater": 1.0}
+    assert search(state, scene="underwater") == ["20260125 Siqui/photo/img1.arw", "20260713 Komodo/video/manta.mp4"]
+    assert search(state, scene="drone") == ["20260125 Siqui/video/clip.mp4"]
+    decide(photo, [], approved=True, scene="land")  # corrected in the review page
+    assert search(state, scene="land") == ["20260125 Siqui/photo/img1.arw"]
+    assert "20260125 Siqui/photo/img1.arw" not in search(state, scene="underwater")
 
 
 def test_videos_near_a_photo(tmp_path):
