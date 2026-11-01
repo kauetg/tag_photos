@@ -96,3 +96,11 @@ def test_file_counts_per_drive_ignore_missing(tmp_path):
     state.files = {"A/1": {"kind": "raw"}, "A/2": {"kind": "raw", "missing": True}, "B/1": {"kind": "raw"}}
     state.save()
     assert d.file_counts(db) == {"A": 1, "B": 1}
+
+
+def test_search_can_show_only_the_connected_drives(tmp_path):
+    state = State(tmp_path / "index.db")
+    tags = {"scene": {"underwater": 1.0}, "suggestions": [], "model": "m"}
+    state.files = {f"{drive}/20260101 x/1.arw": {"kind": "raw", "tags": tags, "location": None} for drive in "ABC"}
+    assert search(state, drives={"A", "C"}) == ["A/20260101 x/1.arw", "C/20260101 x/1.arw"]
+    assert search(state, drives=set()) == []

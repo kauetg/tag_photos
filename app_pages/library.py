@@ -50,6 +50,10 @@ with st.sidebar:
     )
     country = st.selectbox("Country", [None, *options["country"]], format_func=lambda c: c or "(all)", key="lib_country", on_change=first_page)
     drive = st.selectbox("Drive", [None, *options["drive"]], format_func=lambda d: d or "(all)", key="lib_drive", on_change=first_page)
+    connected = st.toggle(
+        "Only connected drives", key="lib_connected", on_change=first_page,
+        help="Hide what lives on disks that are not plugged in right now.",
+    )
     folder = st.selectbox("Dive folder", [None, *options["folder"]], format_func=lambda f: f or "(all)", key="lib_folder", on_change=first_page)
     dates = st.date_input("Dates", value=(), format="YYYY-MM-DD", key="lib_dates", on_change=first_page)
 
@@ -58,7 +62,7 @@ if len(dates) == 2:
     date_from, date_to = (d.strftime("%Y%m%d") for d in dates)
 
 keys = search(
-    state, text, tuple(kinds or ()), country=country, scene=scene, folder=folder, drive=drive, date_from=date_from, date_to=date_to,
+    state, text, tuple(kinds or ()), country=country, scene=scene, folder=folder, drive=drive, drives={d for d in options["drive"] if cfg.mount_of(d)} if connected else None, date_from=date_from, date_to=date_to,
 )
 
 video_keys = [k for k in keys if state.files[k]["kind"] == "video"]
@@ -186,9 +190,13 @@ def open_buttons(key, scope, stacked=False):
         st.caption(f"Plug in {drive_of(key)} to open it.", help="The preview and tags above come from the index.")
 
 
-def where(key):
-    """'Splash IV · 20250101 Foo', with a plug icon when the drive is connected right now."""
-    return f"{':material/usb:' if cfg.is_mounted(key) else ':material/usb_off:'} {drive_of(key)} · {dive_name(key)}"
+def drive_badge(key):
+    """Which disk the file is on: green when it is plugged in right now, grey when it is not."""
+    plugged = cfg.is_mounted(key)
+    st.badge(
+        drive_of(key), icon=":material/hard_drive:", color="green" if plugged else "gray",
+        help="Plugged in" if plugged else "Not plugged in: the preview and tags come from the index",
+    )
 
 
 def place_of(entry):
@@ -240,7 +248,8 @@ def render_list_card(key):
         with info:
             kind = "Video" if entry["kind"] == "video" else "Photo"
             st.subheader(name, anchor=False)
-            st.caption(f"{kind} · {where(key)} · {place}")
+            drive_badge(key)
+            st.caption(f"{kind} · {dive_name(key)} · {place}")
             if entry["kind"] == "video":
                 st.caption(f"{format_time(entry['video']['duration'])} long, one frame every {entry['video']['interval']:.0f} s")
                 for line in moments(entry, query_of(key)):
@@ -269,9 +278,10 @@ def render_grid_card(key):
     is_video = entry["kind"] == "video"
     with st.container(border=True):
         render_media(key, entry, name, hint=False, crop=True)
+        drive_badge(key)
         st.markdown(f"**{name}**")
         meta = f"{format_time(entry['video']['duration'])} · " if is_video else ""
-        st.caption(f"{meta}{place_of(entry)} · {where(key)[:60]}")
+        st.caption(f"{meta}{place_of(entry)} · {dive_name(key)[:8]}")
         if is_video:
             shown = [label(t["keyword"]) for t in matching_tags(entry, query_of(key))[:3]]
         else:

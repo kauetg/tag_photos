@@ -60,6 +60,7 @@ def search(
     date_to: str | None = None,
     folder: str | None = None,
     drive: str | None = None,
+    drives: set[str] | None = None,
 ) -> list[str]:
     """Keys of the files matching every filter; every word of `text` must match somewhere."""
     wanted = set().union(*(KINDS[k] for k in kinds)) if kinds else set()
@@ -81,6 +82,8 @@ def search(
         if folder and not key.startswith(folder + "/"):
             continue
         if drive and not key.startswith(drive + "/"):
+            continue
+        if drives is not None and drive_of(key) not in drives:
             continue
         if terms:
             hay = haystack(key, entry)
