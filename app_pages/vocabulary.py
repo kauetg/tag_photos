@@ -48,7 +48,7 @@ def pretty(keyword: str) -> str:
 def new_tag_form(key: str, parent: str) -> None:
     """Create a tag under `parent`; it gets a plain prompt and every scene, to be refined in the form on the right."""
     options = [TOP, *parent_options()]
-    with st.form(key, border=False):
+    with st.form(key, border=False, clear_on_submit=True):
         where = st.selectbox("Inside", options, index=options.index(parent) if parent in options else 0, format_func=pretty)
         name = st.text_input("Name", placeholder="Whale shark")
         tier = st.segmented_control("Kind", TIERS, default="manual", format_func=str.title, help="\n\n".join(TIER_HELP.values()))
