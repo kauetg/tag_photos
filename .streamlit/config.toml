@@ -1,4 +1,7 @@
-# ReeFind colors: ocean blue and ruby red (see assets/).
+# ReeFind colors: ocean blue and ruby red (see assets/). Headings in Jost, a geometric Google font close to the logo's Bauhaus.
+[theme]
+headingFont = "Jost:https://fonts.googleapis.com/css2?family=Jost:wght@400..700&display=swap"
+
 [theme.light]
 primaryColor = "#9B2335"
 textColor = "#14233A"
