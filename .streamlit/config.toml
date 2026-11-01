@@ -1,0 +1,9 @@
+# ReeFind colors: ocean blue and ruby red (see assets/).
+[theme.light]
+primaryColor = "#9B2335"
+textColor = "#14233A"
+
+[theme.dark]
+primaryColor = "#C8434F"
+backgroundColor = "#091524"
+secondaryBackgroundColor = "#0F2238"

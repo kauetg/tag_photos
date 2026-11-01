@@ -6,9 +6,12 @@ import streamlit as st
 
 from mediatagger.uicontext import context, reload_state
 
-st.set_page_config(page_title="Media tagger", page_icon=":material/sailing:", layout="wide")
+st.set_page_config(page_title="ReeFind", page_icon="assets/gliph.svg", layout="wide")
 
 cfg, _, _ = context()
+theme = st.context.theme.type or "dark"
+st.logo(f"assets/logo-for-{theme}.svg", icon_image=f"assets/gliph-for-{theme}.svg", size="large")
+st.html('<style>[data-testid="stSidebarLogo"]{height:3.25rem}[data-testid="stSidebarHeader"]{height:5rem}</style>')  # "large" is only 2rem
 
 pages = st.navigation([
     st.Page("app_pages/library.py", title="Library", icon=":material/search:", default=True),
