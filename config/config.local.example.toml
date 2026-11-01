@@ -1,4 +1,10 @@
-# Copy to config.local.toml and edit for this machine.
+# Copy to config.local.toml and edit for this machine. config.local.toml is not committed.
+
+# Root of the media drive. Every path in data/state.json is relative to it.
 media_root = "D:\\"
+
+# Tools are looked for in tools/ and on the PATH; set a path only if they live somewhere else.
 # exiftool = "C:\\path\\to\\exiftool.exe"
 # ffmpeg = "C:\\path\\to\\ffmpeg.exe"
+# vlc = "C:\\Program Files\\VideoLAN\\VLC\\vlc.exe"
+# dng_converter = "C:\\Program Files\\Adobe\\Adobe DNG Converter\\Adobe DNG Converter.exe"

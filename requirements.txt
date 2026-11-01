@@ -1,2 +1,12 @@
-# Phase 1 uses only the standard library.
-# PyTorch and onnxruntime are installed per machine (see README), not listed here.
+# Install PyTorch FIRST, for this machine (see README: "Install"). It is not listed here on purpose, so that
+# installing this file never replaces a CUDA build of PyTorch with a CPU one.
+#
+# Versions are the ones the project was built and tested with (Python 3.13); newer ones should work.
+open_clip_torch>=3.3   # CLIP and BioCLIP models
+timm>=1.0
+huggingface_hub>=2.4   # downloads the model weights the first time
+numpy>=2.5
+pillow>=13.0
+rawpy>=0.27            # fallback RAW reader (most RAW files are read through their embedded preview)
+pandas>=3.1
+streamlit>=1.66        # Library, Review, Write, Vocabulary and Locations pages
