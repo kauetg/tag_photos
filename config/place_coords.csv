@@ -1,0 +1,61 @@
+keyword,lat,lon,source
+Location|Brazil|Rio de Janeiro|Paraty,-23.21965,-44.71542,osm
+Location|Brazil|Sao Paulo,-22.07027,-48.43339,approx
+Location|Brazil|Sao Paulo|Ilhabela,-23.84522,-45.34478,osm
+Location|Brazil|Sao Paulo|Sao Paulo,-23.55065,-46.63338,osm
+Location|Brazil|Sao Paulo|Ubatuba,-23.39775,-45.08200,osm
+Location|Indonesia|Bali,-8.22713,115.19192,osm
+Location|Indonesia|Flores|Komodo,-8.58919,119.46241,osm
+Location|Indonesia|Flores|Komodo|Padar,-8.58919,119.46241,approx
+Location|Indonesia|Flores|Labuan Bajo,-8.48993,119.87646,osm
+Location|Indonesia|Riau Islands,-0.15478,104.58037,approx
+Location|Indonesia|Riau Islands|Batam,1.10308,104.03837,osm
+Location|Indonesia|Riau Islands|Bintan,1.01966,104.56982,osm
+Location|Indonesia|Riau Islands|Bintan|Trikora,0.85038,104.60552,osm
+Location|Malaysia|Johor|Mersing,2.42985,103.83549,osm
+Location|Malaysia|Johor|Rawa Island,2.51994,103.97608,osm
+Location|Malaysia|Kuala Lumpur,3.15170,101.69424,osm
+Location|Malaysia|Pahang|Rompin,2.82458,103.09936,osm
+Location|Malaysia|Pahang|Tioman,2.80651,104.17213,osm
+Location|Malaysia|Pahang|Tioman|Paya,2.78762,104.12197,osm
+Location|Malaysia|Pahang|Tioman|Tekek,2.81874,104.15859,osm
+Location|Malaysia|Sabah|Semporna,4.47908,118.42977,osm
+Location|Malaysia|Sabah|Semporna|Kapalai,4.22084,118.68907,osm
+Location|Malaysia|Sabah|Semporna|Mabul,4.24301,118.63161,osm
+Location|Malaysia|Sabah|Semporna|Sipadan,4.47922,118.61355,osm
+Location|Philippines,12.75035,122.73121,approx
+Location|Philippines|Bohol,9.83333,124.16156,osm
+Location|Philippines|Bohol|Anda,9.74409,124.57544,osm
+Location|Philippines|Bohol|Balicasag,9.51729,123.68438,osm
+Location|Philippines|Bohol|Loboc,9.63708,124.03087,osm
+Location|Philippines|Bohol|Panglao,9.57919,123.74526,osm
+Location|Philippines|Bohol|Panglao|Alona,9.54812,123.77204,osm
+Location|Philippines|Bohol|Tagbilaran,9.64026,123.85598,osm
+Location|Philippines|Cebu,10.47000,123.83000,osm
+Location|Philippines|Mindoro|Apo Reef,12.68042,120.47400,osm
+Location|Philippines|Negros Oriental|Dumaguete,9.30548,123.30804,osm
+Location|Philippines|Negros Oriental|Dumaguete|Tambaybay,9.30548,123.30804,approx
+Location|Philippines|Palawan|Coron,11.99855,120.20516,osm
+Location|Philippines|Palawan|El Nido,11.18004,119.39050,osm
+Location|Philippines|Siargao,9.90376,126.05074,osm
+Location|Philippines|Siargao|Cloud 9,9.90376,126.05074,approx
+Location|Philippines|Siargao|Magpupungko,9.90376,126.05074,approx
+Location|Philippines|Siquijor,9.18000,123.58000,osm
+Location|Philippines|Siquijor|Cambugahay,9.14008,123.62674,osm
+Location|Philippines|Siquijor|Salagdon,9.18000,123.58000,approx
+Location|Singapore,1.28992,103.85191,osm
+Location|Spain|Madrid,40.41678,-3.70351,osm
+Location|Spain|Segovia,40.94812,-4.11721,osm
+Location|Thailand|Bangkok,13.75249,100.49351,osm
+Location|Thailand|Chiang Mai,18.78828,98.98588,osm
+Location|Thailand|Chiang Mai|Elephant Nature Park,19.21468,98.86164,osm
+Location|Thailand|Krabi,8.11117,99.10973,osm
+Location|Thailand|Krabi|Koh Lanta,7.55984,99.05729,osm
+Location|Thailand|Krabi|Koh Lanta|Koh Haa,7.55984,99.05729,approx
+Location|Thailand|Krabi|Phi Phi,7.75224,98.77668,osm
+Location|Thailand|Krabi|Railay,8.01068,98.83966,osm
+Location|Thailand|Phuket,7.93660,98.35293,osm
+Location|Thailand|Similan Islands,8.57713,97.64635,osm
+Location|Thailand|Similan Islands|Ko Bon,8.82702,97.80055,osm
+Location|Thailand|Similan Islands|Ko Tachai,9.07367,97.81284,osm
+Location|Thailand|Similan Islands|Richelieu Rock,9.36341,98.02206,osm

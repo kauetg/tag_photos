@@ -5,24 +5,33 @@ Every edit to a place is saved as soon as you make it; nothing here needs a sepa
 """
 import re
 from calendar import month_name, monthcalendar, monthrange
-from collections import defaultdict
+from collections import Counter, defaultdict
 from dataclasses import replace
 from datetime import date, timedelta
 from html import escape
 
+import folium
+import folium.plugins
 import streamlit as st
+from streamlit_folium import st_folium
 
 from mediatagger.config import normalize, parse_folder_date
 from mediatagger.places import (
-    DateRule, NameRule, default_keyword, load_date_rules, load_name_rules, save_date_rules, save_name_rules,
-    unmapped_folders, validate_date_rules, validate_name_rules,
+    DateRule, NameRule, PlaceCoord, default_keyword, load_date_rules, load_name_rules, load_place_coords, save_date_rules,
+    save_name_rules, save_place_coords, unmapped_folders, validate_date_rules, validate_name_rules,
 )
+from mediatagger.review import effective_location
 from mediatagger.scan import relocate, resolve_location
 from mediatagger.uicontext import context, reload_config
+
+CLUSTER_JS = """function(cluster){var n=0;cluster.getAllChildMarkers().forEach(function(m){
+n+=parseInt((m.options.icon.options.html||'').replace(/<[^>]+>/g,''))||0});
+return L.divIcon({html:'<div class="clu">'+n+'</div>',className:'',iconSize:[44,44]});}"""
 
 cfg, _, state = context()
 names_path = cfg.config_dir / "locations.csv"
 dates_path = cfg.config_dir / "date_ranges.csv"
+coords_path = cfg.config_dir / "place_coords.csv"
 name_rules = load_name_rules(names_path)
 date_rules = load_date_rules(dates_path)
 
@@ -197,7 +206,7 @@ if missing:
         st.caption("A place that is not listed yet? Create it with *New place* below, then come back.")
 
 # --- places -----------------------------------------------------------------------------------------------------
-tab_places, tab_dates = st.tabs(["Places", "Date ranges"], key="locations_tab", on_change="rerun")  # fixed labels keep the tab across saves
+tab_places, tab_map, tab_dates = st.tabs(["Places", "Map", "Date ranges"], key="locations_tab", on_change="rerun")  # fixed labels keep the tab across saves
 
 with tab_places:
     st.caption(f"{len(places)} places, {len(name_rules)} folder words. A word in a folder name means its place; the longest match wins.")
@@ -253,6 +262,59 @@ with tab_places:
                             st.rerun()
     if search.strip() and not by_country:
         st.info("No place matches that.")
+
+# --- map --------------------------------------------------------------------------------------------------------
+with tab_map:
+    photos = Counter(effective_location(e).get("keyword") for e in state.files.values() if not e.get("missing"))
+    keywords = sorted({r.keyword for r in [*name_rules, *date_rules]}, key=label)
+    coords = load_place_coords(coords_path)
+    on_map = [k for k in keywords if k in coords]
+    st.caption(
+        f"{len(on_map)} of {len(keywords)} places on the map; the number is how many files were taken there, and nearby "
+        "places merge as you zoom out. A dashed ring means the spot is approximate."
+    )
+    if on_map:
+        fmap = folium.Map(tiles="OpenStreetMap", control_scale=True)
+        bounds = [[min(coords[k].lat for k in on_map), min(coords[k].lon for k in on_map)],
+                  [max(coords[k].lat for k in on_map), max(coords[k].lon for k in on_map)]]
+        fmap.get_root().script.add_child(folium.Element(  # the map is drawn inside a hidden tab: fit it once it has a size
+            f"var fitted=false;new ResizeObserver(function(){{{fmap.get_name()}.invalidateSize();"
+            f"if(!fitted&&{fmap.get_name()}.getSize().x){{fitted=true;{fmap.get_name()}.fitBounds({bounds});}}}})"
+            f".observe(document.getElementById('{fmap.get_name()}'));"
+        ))
+        fmap.get_root().header.add_child(folium.Element(
+            "<style>.pin,.clu{display:flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;font:700 12px sans-serif;"
+            "border:2px solid #fff;box-shadow:0 1px 4px #0006}.pin{width:30px;height:30px}.pin.approx{border-style:dashed}"
+            ".clu{width:44px;height:44px;background:#1d3557;font-size:14px}</style>"
+        ))
+        cluster = folium.plugins.MarkerCluster(icon_create_function=CLUSTER_JS).add_to(fmap)  # each pin's text is its photo count
+        for k in on_map:
+            c, color = coords[k], COUNTRY_COLOR.get(next((r.country for r in [*name_rules, *date_rules] if r.keyword == k), ""), "#8d99ae")
+            html = f'<div class="pin{" approx" if c.source == "approx" else ""}" style="background:{color}">{photos[k]}</div>'
+            folium.Marker(
+                [c.lat, c.lon], icon=folium.DivIcon(html=html, icon_size=(30, 30), icon_anchor=(15, 15)),
+                tooltip=f"{label(k)} · {photos[k]} files" + (" · approximate" if c.source == "approx" else ""),
+            ).add_to(cluster)
+        clicked = st_folium(fmap, height=520, width="stretch", returned_objects=["last_clicked"], key="place_map").get("last_clicked")
+    else:
+        clicked = None
+        st.info("No coordinates yet: pick a place below and click the map to place it.")
+
+    with st.container(border=True):
+        st.markdown("**Fix a place**")
+        order = sorted(keywords, key=lambda k: (coords[k].source != "approx" if k in coords else False, label(k)))  # approximate and missing first
+        pick = st.selectbox(
+            "Place", order, label_visibility="collapsed", format_func=lambda k: label(k) + (
+                "  ·  not on the map" if k not in coords else "  ·  approximate" if coords[k].source == "approx" else ""),
+        )
+        if clicked:
+            if st.button(f"Put {label(pick)} at {clicked['lat']:.4f}, {clicked['lng']:.4f}", icon=":material/pin_drop:", type="primary"):
+                coords[pick] = PlaceCoord(pick, clicked["lat"], clicked["lng"], "manual")
+                save_place_coords(coords_path, coords)
+                st.toast(f"{label(pick)} moved.", icon=":material/check:")
+                st.rerun()
+        else:
+            st.caption("Click the exact spot on the map, then the button to put the place there appears.")
 
 # --- date ranges ------------------------------------------------------------------------------------------------
 with tab_dates:

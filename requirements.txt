@@ -10,3 +10,5 @@ pillow>=13.0
 rawpy>=0.27            # fallback RAW reader (most RAW files are read through their embedded preview)
 pandas>=3.1
 streamlit>=1.66        # Library, Review, Write, Vocabulary and Locations pages
+folium>=0.20           # the map on the Locations page (Leaflet)
+streamlit-folium>=0.27

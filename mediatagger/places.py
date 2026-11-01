@@ -5,7 +5,7 @@ import csv
 import os
 import shutil
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import normalize, parse_folder_date
@@ -58,6 +58,34 @@ def load_name_rules(path: Path) -> list[NameRule]:
 
 def load_date_rules(path: Path) -> list[DateRule]:
     return [DateRule(**{c: row.get(c, "") for c in DATE_COLUMNS}) for row in _read(path) if row.get("start") or row.get("end")]
+
+
+@dataclass(frozen=True)
+class PlaceCoord:
+    """Where a place is on the map. `source` is 'osm' (found by name), 'approx' (a nearby or parent place) or 'manual'."""
+
+    keyword: str
+    lat: float
+    lon: float
+    source: str = "manual"
+
+
+def load_place_coords(path: Path) -> dict[str, PlaceCoord]:
+    """keyword -> PlaceCoord, from config/place_coords.csv; rows with unreadable numbers are skipped."""
+    coords = {}
+    for row in _read(path):
+        try:
+            coords[row["keyword"]] = PlaceCoord(row["keyword"], float(row["lat"]), float(row["lon"]), row.get("source") or "manual")
+        except (KeyError, ValueError):
+            continue
+    return coords
+
+
+def save_place_coords(path: Path, coords: dict[str, PlaceCoord]) -> None:
+    """Validated, atomic write, sorted by keyword; the previous file is kept as place_coords.csv.bak."""
+    problems = [f"{c.keyword}: latitude/longitude out of range." for c in coords.values() if not (-90 <= c.lat <= 90 and -180 <= c.lon <= 180)]
+    rows = [replace(c, lat=f"{c.lat:.5f}", lon=f"{c.lon:.5f}") for _, c in sorted(coords.items())]
+    _save(path, ["keyword", "lat", "lon", "source"], rows, problems)
 
 
 def _place_problems(where: str, keyword: str, country: str) -> list[str]:
