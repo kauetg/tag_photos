@@ -12,6 +12,7 @@ _BUNDLED = {
     "ffprobe": ["tools/ffmpeg/bin/ffprobe.exe"],
     # Adobe's installer puts it here; absolute, so PROJECT_ROOT / path keeps it as is.
     "dng_converter": [r"C:\Program Files\Adobe\Adobe DNG Converter\Adobe DNG Converter.exe"],
+    "vlc": [r"C:\Program Files\VideoLAN\VLC\vlc.exe", r"C:\Program Files (x86)\VideoLAN\VLC\vlc.exe"],
 }
 
 

@@ -1,45 +1,17 @@
 """Streamlit review page: look at each tagged photo, tick the tags to keep, save the decision.
 
-Start it with `python tagger.py review` (or `streamlit run review_app.py -- --media-root <path>`).
-Decisions go to state.json under "review"; nothing is written to the photos here.
+Run from streamlit_app.py. Decisions go to state.json under "review"; nothing is
+written to the photos here.
 """
-import argparse
-import sys
-
 import streamlit as st
 
-from mediatagger.config import load_config
 from mediatagger.review import (
     APPROVED, AUTO, PENDING, SKIPPED, decide, is_sample, label, status, suggested, tagged_keys, triage,
 )
-from mediatagger.state import State
-from mediatagger.thumbs import thumbnail
-from mediatagger.tools import find_tool
+from mediatagger.uicontext import context, photo_thumb
 
-st.set_page_config(page_title="Review tags", page_icon=":material/sailing:", layout="wide")
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--media-root")
-args, _ = parser.parse_known_args(sys.argv[1:])
-
-
-@st.cache_resource
-def get_cfg(media_root):
-    cfg = load_config(media_root=media_root)
-    return cfg, find_tool("exiftool", cfg)
-
-
-@st.cache_data(show_spinner="Preparing thumbnail ...", max_entries=500)
-def get_thumb(path, _cfg, _exiftool):
-    return str(thumbnail(path, _cfg, _exiftool))
-
-
-cfg, exiftool = get_cfg(args.media_root)
-
-if "state" not in st.session_state:
-    st.session_state.state = State.load(cfg.state_path)
-    st.session_state.pos = 0
-state = st.session_state.state
+cfg, exiftool, state = context()
+st.session_state.setdefault("pos", 0)
 
 all_keys = tagged_keys(state)
 if not all_keys:
@@ -91,7 +63,7 @@ def finish(approved):
 left, right = st.columns([3, 2], gap="large")
 with left:
     try:
-        st.image(get_thumb(str(cfg.media_root / key), cfg, exiftool), alt=f"Preview of {key.rsplit('/', 1)[-1]}", width="stretch")
+        st.image(photo_thumb(str(cfg.media_root / key), cfg, exiftool), alt=f"Preview of {key.rsplit('/', 1)[-1]}", width="stretch")
     except Exception as exc:  # unreadable file: still let the user move on
         st.warning(str(exc), title="No preview")
 

@@ -10,6 +10,11 @@ from .imaging import load_image
 THUMB_SIDE = 800
 
 
+def thumb_path(cfg: Config, name: str) -> Path:
+    """Where the cached JPEG for `name` lives (name is any stable string)."""
+    return cfg.data_dir / "thumbs" / f"{hashlib.sha1(name.encode('utf-8')).hexdigest()}.jpg"
+
+
 def thumbnail(path: Path, cfg: Config, exiftool: str) -> Path:
     """Cached JPEG under data/thumbs, named by the source path, size and mtime."""
     path = Path(path)

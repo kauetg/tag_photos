@@ -6,10 +6,12 @@ from pathlib import Path
 
 from .config import load_config
 from .device import onnx_providers, pick_device
+from .premiere import DEFAULT_PAD, export_search
 from .review import AUTO_THRESHOLD, THRESHOLD, apply_triage, export_csv
 from .scan import resolve_roots, scan, write_unmapped_report
 from .state import State
 from .tools import find_tool
+from .video import INTERVAL, MAX_FRAMES
 from .xmp import is_embedded, read_back, sidecar_path, write_keywords
 
 # Stages planned in PLAN.md that are not implemented yet: name -> phase.
@@ -42,6 +44,21 @@ def build_parser() -> argparse.ArgumentParser:
     ex.add_argument("--threshold", type=float, default=THRESHOLD, help="min probability counted as suggested")
 
     sub.add_parser("review", parents=[common], help="open the Streamlit review page")
+
+    vd = sub.add_parser("video", parents=[common], help="sample frames of each video and index what they show (read-only)")
+    vd.add_argument("--interval", type=float, default=INTERVAL, help="seconds between frames")
+    vd.add_argument("--max-frames", type=int, default=MAX_FRAMES, help="frame cap per video")
+    vd.add_argument("--redo", action="store_true", help="reprocess videos already indexed")
+    vd.add_argument("--strips-only", action="store_true",
+                    help="only build the hover-preview strips of videos already indexed (no classification)")
+
+    pr = sub.add_parser("premiere", parents=[common], help="export the videos matching a search as an XML for Premiere Pro")
+    pr.add_argument("search", nargs="?", default="", help="words to look for, e.g. turtle (default: every indexed video)")
+    pr.add_argument("--trim", action="store_true", help="cut each video around the moments instead of using the whole file")
+    pr.add_argument("--pad", type=float, default=DEFAULT_PAD, help="with --trim: seconds kept around each moment")
+    pr.add_argument("--output", metavar="XML", help="default: <data_dir>/premiere.xml")
+    pr.add_argument("--bins", action=argparse.BooleanOptionalAction, default=True,
+                    help="put the trimmed clips in one bin per category (default on)")
 
     tr = sub.add_parser("triage", parents=[common], help="auto-approve clear photos, leave the uncertain for review")
     tr.add_argument("--auto", type=float, default=AUTO_THRESHOLD, help="core tags at least this likely are automatic")
@@ -76,7 +93,7 @@ def cmd_doctor(cfg) -> int:
     print(f"state file : {cfg.state_path}")
     print(f"device     : {pick_device()}")
     print(f"onnx       : {', '.join(onnx_providers())}")
-    for tool in ("exiftool", "ffmpeg", "ffprobe", "dng_converter"):
+    for tool in ("exiftool", "ffmpeg", "ffprobe", "dng_converter", "vlc"):
         print(f"{tool:<11}: {find_tool(tool, cfg) or 'NOT FOUND'}")
     print(f"folders    : {', '.join(cfg.folders) or '(none)'}")
     print(f"locations  : {len(cfg.locations)} rows")
@@ -170,6 +187,43 @@ def cmd_export(cfg, args) -> int:
     return 0
 
 
+def cmd_video(cfg, args) -> int:
+    from .video import run_strips, run_video  # heavy imports (torch) only when needed
+
+    prefix = None
+    if args.folder:
+        folder = Path(args.folder)
+        prefix = folder.relative_to(cfg.media_root).as_posix() if folder.is_absolute() else folder.as_posix()
+    if args.strips_only:
+        return run_strips(cfg, State.load(cfg.state_path), prefix=prefix, limit=args.limit, redo=args.redo)
+    return run_video(
+        cfg, State.load(cfg.state_path), prefix=prefix, limit=args.limit,
+        interval=args.interval, max_frames=args.max_frames, dry_run=args.dry_run, redo=args.redo,
+    )
+
+
+def cmd_premiere(cfg, args) -> int:
+    ffprobe = find_tool("ffprobe", cfg)
+    if not ffprobe:
+        raise SystemExit("ffprobe not found (see `doctor`).")
+    try:
+        xml, summary = export_search(
+            State.load(cfg.state_path), cfg.media_root, ffprobe, args.search, args.pad, bins=args.bins,
+            whole=not args.trim,
+        )
+    except ValueError:
+        print("No indexed video matches that search.")
+        return 1
+    output = Path(args.output) if args.output else cfg.data_dir / "premiere.xml"
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(xml, encoding="utf-8")
+    bins = f", bins: {', '.join(summary['categories'])}" if args.bins else ""
+    print(f"{summary['clips']} clips from {summary['videos']} videos -> {output}{bins}")
+    for key in summary["skipped"]:
+        print(f"  skipped (ffprobe could not read it): {key}")
+    return 0
+
+
 def cmd_triage(cfg, args) -> int:
     from .tag import describe_triage
 
@@ -185,7 +239,7 @@ def cmd_review(cfg, args) -> int:
     import subprocess
     import sys
 
-    app = Path(__file__).resolve().parent.parent / "review_app.py"
+    app = Path(__file__).resolve().parent.parent / "streamlit_app.py"
     command = [sys.executable, "-m", "streamlit", "run", str(app), "--", "--media-root", str(cfg.media_root)]
     return subprocess.call(command)
 
@@ -219,6 +273,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_doctor(cfg)
     if args.command == "tag":
         return cmd_tag(cfg, args)
+    if args.command == "premiere":
+        return cmd_premiere(cfg, args)
+    if args.command == "video":
+        return cmd_video(cfg, args)
     if args.command == "triage":
         return cmd_triage(cfg, args)
     if args.command == "write":
