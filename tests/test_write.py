@@ -29,6 +29,14 @@ def test_keywords_include_location_once():
     assert keywords_for({"location": {"keyword": SIQUI}, "review": {"keywords": [TURTLE]}}) == [TURTLE, SIQUI]
 
 
+def test_review_location_is_what_gets_written():
+    entry = {
+        "location": SIQUI,
+        "review": {"status": "approved", "keywords": [TURTLE], "location": {"keyword": "Location|Philippines|Bohol"}},
+    }
+    assert keywords_for(entry) == [TURTLE, "Location|Philippines|Bohol"]
+
+
 def test_only_approved_photos_are_selected(tmp_path):
     assert select_files(make_state(tmp_path), None, redo=False, limit=None) == ["a/turtle.arw"]
 

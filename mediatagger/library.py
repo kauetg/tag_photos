@@ -11,7 +11,7 @@ import sys
 from pathlib import Path
 
 from .config import normalize
-from .review import AUTO, APPROVED, status, suggested
+from .review import AUTO, APPROVED, effective_location, status, suggested
 from .state import State
 
 KINDS = {"video": {"video"}, "photo": {"photo", "raw"}}
@@ -25,7 +25,7 @@ def entry_keywords(entry: dict) -> list[str]:
         keywords = list(entry["review"]["keywords"])
     else:
         keywords = suggested(entry)
-    location = (entry.get("location") or {}).get("keyword")
+    location = effective_location(entry).get("keyword")
     return [*keywords, location] if location else keywords
 
 
@@ -66,7 +66,7 @@ def search(
     for key, entry in state.files.items():
         if entry["kind"] not in wanted or not indexed(entry):
             continue
-        location = entry.get("location") or {}
+        location = effective_location(entry)
         if country and location.get("country") != country:
             continue
         if city and location.get("city") != city:
@@ -103,7 +103,7 @@ def filter_options(state: State) -> dict[str, list[str]]:
     for key, entry in state.files.items():
         if not indexed(entry):
             continue
-        location = entry.get("location") or {}
+        location = effective_location(entry)
         countries.add(location.get("country") or "")
         cities.add(location.get("city") or "")
         folders.add(dive_folder(key))

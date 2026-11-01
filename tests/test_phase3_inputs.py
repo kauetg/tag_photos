@@ -10,7 +10,8 @@ VOCAB = PROJECT_ROOT / "config" / "vocabulary.csv"
 def test_real_vocabulary_is_well_formed():
     rows = load_vocabulary(VOCAB)
     assert len(rows) > 100
-    assert {r.tier for r in rows} <= {"core", "species"}
+    assert {r.tier for r in rows} <= {"core", "species", "manual"}
+    assert any(r.tier == "manual" for r in rows) and any("cots" in r.aliases for r in rows)
     assert all(r.scenes <= {"underwater", "topside", "land"} and r.scenes for r in rows)
     assert all(r.keyword and r.prompt for r in rows)
     assert len({r.keyword for r in rows}) == len(rows)  # no duplicate keywords

@@ -10,7 +10,7 @@ from mediatagger.library import (
 )
 from mediatagger.scrub import scrub
 from mediatagger.premiere import DEFAULT_PAD, export_selection
-from mediatagger.review import label
+from mediatagger.review import effective_location, label
 from mediatagger.tools import find_tool
 from mediatagger.uicontext import context, photo_thumb
 
@@ -148,8 +148,8 @@ def open_buttons(key, scope):
 for key in keys[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]:
     entry = state.files[key]
     name = key.rsplit("/", 1)[-1]
-    location = entry.get("location") or {}
-    place = ", ".join(p for p in (location.get("city"), location.get("country")) if p) or "no location"
+    location = effective_location(entry)
+    place =", ".join(p for p in (location.get("city"), location.get("country")) if p) or "no location"
     with st.container(border=True):
         image, info = st.columns([1, 3], gap="medium")
         with image:

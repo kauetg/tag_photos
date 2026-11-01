@@ -7,7 +7,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from .config import Config
-from .review import APPROVED, AUTO
+from .review import APPROVED, AUTO, effective_location
 from .state import State
 from .xmp import ExiftoolError, write_keywords
 
@@ -17,7 +17,7 @@ WRITABLE_KINDS = {"photo", "raw"}
 def keywords_for(entry: dict) -> list[str]:
     """Approved tags plus the location keyword, without duplicates, in a stable order."""
     keywords = list((entry.get("review") or {}).get("keywords", []))
-    location = (entry.get("location") or {}).get("keyword")
+    location = effective_location(entry).get("keyword")
     if location and location not in keywords:
         keywords.append(location)
     return keywords
@@ -57,7 +57,7 @@ def run_write(
     for key in keys:
         entry = state.files[key]
         keywords = keywords_for(entry)
-        location = entry.get("location") or {}
+        location = effective_location(entry)
         try:
             result = write_keywords(
                 cfg.media_root / key, keywords, cfg, exiftool,

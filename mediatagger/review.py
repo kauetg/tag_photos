@@ -51,13 +51,19 @@ def triage(entry: dict, auto: float = AUTO_THRESHOLD, uncertain: float = THRESHO
     return "auto", [s["keyword"] for s in core if s["prob"] >= auto]
 
 
-def apply_triage(state: State, auto: float = AUTO_THRESHOLD, uncertain: float = THRESHOLD) -> dict[str, int]:
-    """Mark the clear photos as auto-approved. Never touches a human decision."""
+def apply_triage(
+    state: State, auto: float = AUTO_THRESHOLD, uncertain: float = THRESHOLD, only_new: bool = False,
+) -> dict[str, int]:
+    """Mark the clear photos as auto-approved. Never touches a human decision.
+
+    `only_new` leaves every photo that already has a review entry alone, so opening the review page
+    never overrides thresholds you applied from the command line.
+    """
     counts = {AUTO: 0, "review": 0, "sample": 0, "kept": 0}
     for key in tagged_keys(state):
         entry = state.files[key]
-        if status(entry) not in (PENDING, AUTO):
-            counts["kept"] += 1  # a person already decided
+        if status(entry) not in (PENDING, AUTO) or (only_new and "review" in entry):
+            counts["kept"] += 1  # a person (or an earlier triage) already decided
             continue
         entry.pop("review", None)  # recompute, so changed thresholds or a re-tag take effect
         verdict, keywords = triage(entry, auto, uncertain)
@@ -71,8 +77,41 @@ def apply_triage(state: State, auto: float = AUTO_THRESHOLD, uncertain: float = 
     return counts
 
 
-def decide(entry: dict, keywords: list[str], approved: bool) -> None:
+def decide(entry: dict, keywords: list[str], approved: bool, location: dict | None = None) -> None:
+    """Store the human decision. `location` is set only when the person changed the place."""
     entry["review"] = {"status": APPROVED if approved else SKIPPED, "keywords": keywords if approved else []}
+    if approved and location:
+        entry["review"]["location"] = location
+
+
+def effective_location(entry: dict) -> dict:
+    """The place to use for a photo: the one picked in review, else the one from folder/date."""
+    return (entry.get("review") or {}).get("location") or entry.get("location") or {}
+
+
+def known_locations(cfg) -> list[dict]:
+    """Every place named in locations.csv and date_ranges.csv, for the review page's location picker."""
+    places = {}
+    for item in [*cfg.locations, *cfg.date_ranges]:
+        loc = getattr(item, "location", item)  # a DateRange carries its Location
+        if loc.keyword:
+            places[(loc.keyword, loc.city, loc.sublocation)] = {
+                "keyword": loc.keyword, "country": loc.country, "city": loc.city, "sublocation": loc.sublocation,
+            }
+    return sorted(places.values(), key=lambda p: (p["country"], p["city"], p["sublocation"], p["keyword"]))
+
+
+def place_label(place: dict) -> str:
+    parts = [p for p in (place.get("sublocation"), place.get("city"), place.get("country")) if p]
+    return ", ".join(parts) or place.get("keyword", "(no location)")
+
+
+def split_by_confidence(entry: dict, auto: float = AUTO_THRESHOLD) -> tuple[list[str], list[str]]:
+    """(sure, unsure) suggestion keywords: core tags at least `auto` likely, then everything else."""
+    sure, unsure = [], []
+    for s in (entry.get("tags") or {}).get("suggestions", []):
+        (sure if s["tier"] == "core" and s["prob"] >= auto else unsure).append(s["keyword"])
+    return sure, unsure
 
 
 def label(keyword: str) -> str:
@@ -90,7 +129,7 @@ def export_csv(state: State, path: Path, threshold: float = THRESHOLD) -> int:
         for key in keys:
             entry = state.files[key]
             tags = entry["tags"]
-            loc = entry.get("location") or {}
+            loc = effective_location(entry)
             scene = max(tags["scene"], key=tags["scene"].get) if tags.get("scene") else ""
             out.writerow([
                 key, loc.get("country", ""), loc.get("city", ""), scene,

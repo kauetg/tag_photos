@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 
 import streamlit as st
 
@@ -10,6 +11,7 @@ from .config import load_config
 from .state import State
 from .thumbs import thumbnail
 from .tools import find_tool
+from .vocabulary import load_vocabulary
 
 
 @st.cache_resource
@@ -32,6 +34,18 @@ def context():
 def reload_state(cfg) -> None:
     """Pick up what the command line wrote meanwhile (tag, video, triage ...)."""
     st.session_state.state = State.load(cfg.state_path)
+
+
+@st.cache_data(max_entries=4)
+def _vocabulary(path: str, mtime: int):
+    return load_vocabulary(Path(path))
+
+
+def vocabulary(cfg):
+    """(entries, entries by keyword). Reloaded whenever the CSV changes, e.g. after editing it in the app."""
+    path = cfg.config_dir / "vocabulary.csv"
+    entries = _vocabulary(str(path), path.stat().st_mtime_ns)
+    return entries, {e.keyword: e for e in entries}
 
 
 @st.cache_data(show_spinner="Preparing thumbnail ...", max_entries=500)

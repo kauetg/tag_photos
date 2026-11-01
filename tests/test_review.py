@@ -81,6 +81,57 @@ def test_apply_triage_keeps_human_decisions(tmp_path):
     assert apply_triage(state) == counts  # idempotent
 
 
+def test_split_by_confidence_puts_only_clear_core_tags_in_sure():
+    from mediatagger.review import split_by_confidence
+
+    turtle = "Marine Life|Reptiles|Sea turtle"
+    entry = tagged(
+        (turtle, 0.98, "core"), ("Activity|Scuba diving", 0.6, "core"),
+        (turtle + "|Green sea turtle", 0.95, "species"),  # species are never "sure"
+    )
+    assert split_by_confidence(entry) == ([turtle], ["Activity|Scuba diving", turtle + "|Green sea turtle"])
+
+
+def test_review_location_overrides_the_folder_location():
+    from mediatagger.review import effective_location
+
+    entry = tagged()
+    entry["location"] = {"keyword": "Location|Philippines|Siquijor", "city": "Siquijor"}
+    assert effective_location(entry)["city"] == "Siquijor"
+    decide(entry, [], approved=True, location={"keyword": "Location|Philippines|Bohol", "city": "Bohol"})
+    assert effective_location(entry)["city"] == "Bohol"
+    decide(entry, [], approved=True)  # approving again without touching the place drops the override
+    assert effective_location(entry)["city"] == "Siquijor"
+    decide(entry, [], approved=False, location={"keyword": "x"})  # a skip never stores a place
+    assert "location" not in entry["review"]
+
+
+def test_apply_triage_only_new_leaves_existing_reviews_alone(tmp_path):
+    from mediatagger.review import AUTO, apply_triage
+
+    turtle = "Marine Life|Reptiles|Sea turtle"
+    state = State(tmp_path / "state.json")
+    state.files = {"a/new.arw": tagged((turtle, 0.98, "core")), "a/old.arw": tagged((turtle, 0.98, "core"))}
+    state.files["a/old.arw"]["review"] = {"status": AUTO, "keywords": []}  # an earlier triage with other thresholds
+    counts = apply_triage(state, only_new=True)
+    assert state.files["a/old.arw"]["review"]["keywords"] == []
+    assert state.files["a/new.arw"]["review"]["keywords"] == [turtle]
+    assert counts["kept"] == 1
+
+
+def test_known_locations_merges_locations_and_date_ranges():
+    from types import SimpleNamespace
+
+    from mediatagger.review import known_locations, place_label
+
+    loc = SimpleNamespace(keyword="Location|Malaysia|Johor|Rawa Island", country="Malaysia", city="Mersing", sublocation="Rawa Island")
+    dated = SimpleNamespace(location=SimpleNamespace(keyword="Location|Philippines", country="Philippines", city="", sublocation=""))
+    repeated = SimpleNamespace(location=SimpleNamespace(**vars(loc)))  # a DateRange wraps a Location
+    cfg = SimpleNamespace(locations=[loc], date_ranges=[dated, repeated])
+    places = known_locations(cfg)
+    assert [place_label(p) for p in places] == ["Rawa Island, Mersing, Malaysia", "Philippines"]  # sorted by country, no repeats
+
+
 def test_export_csv(tmp_path):
     state = make_state(tmp_path)
     decide(state.files["a/one.arw"], ["Marine Life|Reptiles|Sea turtle"], approved=True)
